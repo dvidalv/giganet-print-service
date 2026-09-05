@@ -1,0 +1,28 @@
+{
+  "name": "giganet-print-service",
+  "version": "1.0.0",
+  "description": "Servicio local de impresión para macOS — API HTTP para imprimir desde PWA/web sin diálogo del navegador",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "install-service": "node scripts/install-service.js",
+    "uninstall-service": "node scripts/uninstall-service.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "printing",
+    "cups",
+    "macos",
+    "local-service",
+    "pwa"
+  ],
+  "author": "Giganet",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

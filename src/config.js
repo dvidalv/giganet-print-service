@@ -1,0 +1,250 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+
+const SERVICE_NAME = 'Giganet Print Service';
+const SERVICE_VERSION = '1.1.0';
+
+const PRINT_ROLE_KEYS = [
+  'factura',
+  'ticket',
+  'label',
+  'cotizacion',
+  'orden_compra',
+  'caja',
+];
+
+const SUPPORT_DIR = path.join(
+  os.homedir(),
+  'Library',
+  'Application Support',
+  'GiganetPrintService'
+);
+const CONFIG_PATH = path.join(SUPPORT_DIR, 'config.json');
+const DEFAULT_CONFIG_PATH = path.join(__dirname, '..', 'config', 'default.json');
+
+/** @type {object | null} */
+let cachedConfig = null;
+
+function ensureSupportDir() {
+  if (!fs.existsSync(SUPPORT_DIR)) {
+    fs.mkdirSync(SUPPORT_DIR, { recursive: true, mode: 0o700 });
+  }
+}
+
+function generateApiKey() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function readDefaultConfig() {
+  const raw = fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8');
+  return JSON.parse(raw);
+}
+
+function normalizePrinterRoles(rawRoles, defaults) {
+  const base =
+    defaults && typeof defaults === 'object'
+      ? { ...defaults }
+      : Object.fromEntries(PRINT_ROLE_KEYS.map((k) => [k, '']));
+  const incoming = rawRoles && typeof rawRoles === 'object' ? rawRoles : {};
+  const out = {};
+  for (const key of PRINT_ROLE_KEYS) {
+    const value = incoming[key] !== undefined ? incoming[key] : base[key];
+    out[key] = String(value || '').trim();
+  }
+  return out;
+}
+
+function loadConfig({ createIfMissing = true } = {}) {
+  ensureSupportDir();
+
+  if (!fs.existsSync(CONFIG_PATH)) {
+    if (!createIfMissing) {
+      return null;
+    }
+    const defaults = readDefaultConfig();
+    const initial = {
+      ...defaults,
+      printerRoles: normalizePrinterRoles(
+        defaults.printerRoles,
+        defaults.printerRoles
+      ),
+      apiKey: defaults.apiKey || generateApiKey(),
+    };
+    writeConfig(initial);
+    cachedConfig = initial;
+    return { ...initial };
+  }
+
+  const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+  const parsed = JSON.parse(raw);
+  const defaults = readDefaultConfig();
+  const merged = {
+    ...defaults,
+    ...parsed,
+    allowedOrigins: Array.isArray(parsed.allowedOrigins)
+      ? parsed.allowedOrigins
+      : defaults.allowedOrigins,
+    printerRoles: normalizePrinterRoles(
+      parsed.printerRoles,
+      defaults.printerRoles
+    ),
+  };
+
+  if (!merged.apiKey) {
+    merged.apiKey = generateApiKey();
+    writeConfig(merged);
+  } else if (!parsed.printerRoles) {
+    // Persist new printerRoles field for upgrades
+    writeConfig(merged);
+  }
+
+  cachedConfig = merged;
+  return { ...merged };
+}
+
+function writeConfig(config) {
+  ensureSupportDir();
+  const defaults = readDefaultConfig();
+  const toSave = {
+    defaultPrinter: config.defaultPrinter || '',
+    port: Number(config.port) || 9100,
+    host: '127.0.0.1',
+    apiKey: config.apiKey,
+    allowedOrigins: Array.isArray(config.allowedOrigins)
+      ? config.allowedOrigins
+      : [],
+    printTimeoutMs: Number(config.printTimeoutMs) || 30000,
+    printerRoles: normalizePrinterRoles(
+      config.printerRoles,
+      defaults.printerRoles
+    ),
+  };
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2) + '\n', {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  cachedConfig = toSave;
+  return { ...toSave };
+}
+
+function getConfig() {
+  if (!cachedConfig) {
+    return loadConfig();
+  }
+  return { ...cachedConfig, printerRoles: { ...cachedConfig.printerRoles } };
+}
+
+function updateConfig(partial) {
+  const current = getConfig();
+  const next = { ...current, printerRoles: { ...current.printerRoles } };
+
+  if (partial.defaultPrinter !== undefined) {
+    next.defaultPrinter = String(partial.defaultPrinter || '');
+  }
+  if (partial.port !== undefined) {
+    const port = Number(partial.port);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      const err = new Error('Puerto inválido');
+      err.code = 'INVALID_PORT';
+      throw err;
+    }
+    next.port = port;
+  }
+  if (partial.apiKey !== undefined && partial.apiKey !== '') {
+    next.apiKey = String(partial.apiKey);
+  }
+  if (partial.allowedOrigins !== undefined) {
+    if (!Array.isArray(partial.allowedOrigins)) {
+      const err = new Error('allowedOrigins debe ser un arreglo');
+      err.code = 'INVALID_ORIGINS';
+      throw err;
+    }
+    next.allowedOrigins = partial.allowedOrigins
+      .map((o) => String(o).trim())
+      .filter(Boolean);
+  }
+  if (partial.printTimeoutMs !== undefined) {
+    const ms = Number(partial.printTimeoutMs);
+    if (!Number.isInteger(ms) || ms < 1000) {
+      const err = new Error('printTimeoutMs inválido');
+      err.code = 'INVALID_TIMEOUT';
+      throw err;
+    }
+    next.printTimeoutMs = ms;
+  }
+  if (partial.printerRoles !== undefined) {
+    if (!partial.printerRoles || typeof partial.printerRoles !== 'object') {
+      const err = new Error('printerRoles debe ser un objeto');
+      err.code = 'INVALID_PRINTER_ROLES';
+      throw err;
+    }
+    next.printerRoles = normalizePrinterRoles(
+      { ...current.printerRoles, ...partial.printerRoles },
+      current.printerRoles
+    );
+  }
+
+  return writeConfig(next);
+}
+
+function getPublicConfig() {
+  const config = getConfig();
+  return {
+    defaultPrinter: config.defaultPrinter,
+    port: config.port,
+    host: config.host,
+    allowedOrigins: config.allowedOrigins,
+    printTimeoutMs: config.printTimeoutMs,
+    printerRoles: config.printerRoles,
+    hasApiKey: Boolean(config.apiKey),
+  };
+}
+
+function getSettingsPageConfig() {
+  const config = getConfig();
+  return {
+    ...getPublicConfig(),
+    apiKey: config.apiKey,
+  };
+}
+
+/**
+ * Resuelve nombre de impresora: explícita → role → default.
+ * @param {{ printer?: string, role?: string }} opts
+ * @returns {string}
+ */
+function resolvePrinterNameFromConfig({ printer, role } = {}) {
+  const config = getConfig();
+  const explicit = String(printer || '').trim();
+  if (explicit) return explicit;
+
+  const roleKey = String(role || '').trim().toLowerCase();
+  if (roleKey && PRINT_ROLE_KEYS.includes(roleKey)) {
+    const mapped = String(config.printerRoles?.[roleKey] || '').trim();
+    if (mapped) return mapped;
+  }
+
+  return String(config.defaultPrinter || '').trim();
+}
+
+module.exports = {
+  SERVICE_NAME,
+  SERVICE_VERSION,
+  PRINT_ROLE_KEYS,
+  SUPPORT_DIR,
+  CONFIG_PATH,
+  ensureSupportDir,
+  generateApiKey,
+  loadConfig,
+  getConfig,
+  writeConfig,
+  updateConfig,
+  getPublicConfig,
+  getSettingsPageConfig,
+  normalizePrinterRoles,
+  resolvePrinterNameFromConfig,
+};

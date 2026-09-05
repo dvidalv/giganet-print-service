@@ -1,0 +1,134 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execFileSync } = require('child_process');
+const {
+  ensureSupportDir,
+  loadConfig,
+  CONFIG_PATH,
+  SUPPORT_DIR,
+  SERVICE_NAME,
+} = require('../src/config');
+const logger = require('../src/utils/logger');
+
+const LABEL = 'com.giganet.printservice';
+const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
+const NODE_BIN = process.execPath;
+const SERVER_JS = path.join(PROJECT_ROOT, 'src', 'server.js');
+const LOG_DIR = path.join(os.homedir(), 'Library', 'Logs', 'GiganetPrintService');
+
+function ensureDirs() {
+  ensureSupportDir();
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o700 });
+  }
+  const agentsDir = path.dirname(PLIST_PATH);
+  if (!fs.existsSync(agentsDir)) {
+    fs.mkdirSync(agentsDir, { recursive: true });
+  }
+}
+
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buildPlist() {
+  const stdoutLog = path.join(LOG_DIR, 'launchd.stdout.log');
+  const stderrLog = path.join(LOG_DIR, 'launchd.stderr.log');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${escapeXml(NODE_BIN)}</string>
+    <string>${escapeXml(SERVER_JS)}</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>${escapeXml(PROJECT_ROOT)}</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>${escapeXml(stdoutLog)}</string>
+  <key>StandardErrorPath</key>
+  <string>${escapeXml(stderrLog)}</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+  </dict>
+</dict>
+</plist>
+`;
+}
+
+function launchctl(...args) {
+  try {
+    return execFileSync('launchctl', args, { encoding: 'utf8' });
+  } catch (err) {
+    const msg = (err.stderr || err.message || '').toString();
+    // Ignore "not loaded" style errors on bootout
+    if (/not loaded|Could not find|No such process/i.test(msg)) {
+      return '';
+    }
+    throw err;
+  }
+}
+
+function uidDomain() {
+  return `gui/${process.getuid()}`;
+}
+
+function main() {
+  if (process.platform !== 'darwin') {
+    console.error('install-service solo está soportado en macOS.');
+    process.exit(1);
+  }
+
+  console.log(`Instalando ${SERVICE_NAME}…`);
+  ensureDirs();
+
+  const config = loadConfig({ createIfMissing: true });
+  console.log(`Configuración: ${CONFIG_PATH}`);
+  console.log(`API Key generada/existente (guárdala): ${config.apiKey}`);
+  console.log(`Directorio de soporte: ${SUPPORT_DIR}`);
+
+  // Unload previous if present
+  try {
+    launchctl('bootout', uidDomain(), PLIST_PATH);
+  } catch {
+    // ignore
+  }
+
+  fs.writeFileSync(PLIST_PATH, buildPlist(), { encoding: 'utf8', mode: 0o644 });
+  console.log(`LaunchAgent: ${PLIST_PATH}`);
+
+  launchctl('bootstrap', uidDomain(), PLIST_PATH);
+  launchctl('enable', `${uidDomain()}/${LABEL}`);
+  try {
+    launchctl('kickstart', '-k', `${uidDomain()}/${LABEL}`);
+  } catch (err) {
+    console.warn('Advertencia al iniciar con kickstart:', err.message);
+  }
+
+  logger.info('Servicio instalado vía LaunchAgent', { plist: PLIST_PATH });
+
+  console.log('\nListo.');
+  console.log(`  Status:   http://127.0.0.1:${config.port}/status`);
+  console.log(`  Settings: http://127.0.0.1:${config.port}/settings`);
+  console.log('\nEl servicio arrancará automáticamente al iniciar sesión.');
+}
+
+main();

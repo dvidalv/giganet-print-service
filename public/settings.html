@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giganet Print Service — Configuración</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222c;
+      --surface-2: #243040;
+      --border: #314155;
+      --text: #e8eef5;
+      --muted: #8b9bb0;
+      --accent: #1a9f7a;
+      --accent-hover: #148566;
+      --danger: #d64545;
+      --warn: #d4a017;
+      --ok: #2ecc71;
+      --radius: 10px;
+      --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1a3d34 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #1e2a44 0%, transparent 50%),
+        var(--bg);
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      font-size: 1.55rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    .brand span { color: var(--accent); }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warn);
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.err { background: var(--danger); }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 720px) {
+      .grid.two { grid-template-columns: 1fr 1fr; }
+    }
+
+    section {
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button, .btn {
+      appearance: none;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent);
+      color: #04140f;
+    }
+
+    button:hover { background: var(--accent-hover); }
+    button.secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover { background: #2c3b4f; }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .key-box {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .key-box input {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .printers {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .printers li {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.92rem;
+    }
+
+    .printers .name { font-family: var(--mono); font-size: 0.85rem; }
+    .tag {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .tag.default { color: var(--accent); }
+
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      max-width: 360px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .2s ease;
+      pointer-events: none;
+      z-index: 20;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast.ok { border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
+    .toast.err { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+
+    .role-fields {
+      display: grid;
+      gap: 12px;
+    }
+    @media (min-width: 720px) {
+      .role-fields {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;650&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <p class="brand">Giganet <span>Print Service</span></p>
+        <p class="meta" id="versionLabel">Cargando…</p>
+      </div>
+      <div class="badge" id="statusBadge">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Comprobando</span>
+      </div>
+    </header>
+
+    <div class="grid two">
+      <section>
+        <h2>Estado</h2>
+        <p id="statusDetail" class="meta">—</p>
+        <div class="row">
+          <button type="button" class="secondary" id="btnRefresh">Actualizar</button>
+          <button type="button" id="btnTestPrint">Probar impresión</button>
+        </div>
+        <p class="hint">La prueba genera un PDF corto y lo envía a la impresora predeterminada (o a la seleccionada).</p>
+      </section>
+
+      <section>
+        <h2>Impresora predeterminada</h2>
+        <div class="field">
+          <label for="defaultPrinter">Seleccionar impresora</label>
+          <select id="defaultPrinter"></select>
+        </div>
+        <div class="row">
+          <button type="button" id="btnSavePrinter">Guardar impresora</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <section>
+        <h2>Impresoras por tipo de documento</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:14px">
+          El POS envía un <code>role</code> (ticket, factura, etc.). Vacío = usar la predeterminada.
+        </p>
+        <div id="roleFields" class="role-fields"></div>
+        <div class="row">
+          <button type="button" id="btnSaveRoles">Guardar roles</button>
+          <button type="button" class="secondary" id="btnTestRole">Probar role seleccionado</button>
+        </div>
+        <div class="field" style="margin-top:12px">
+          <label for="testRole">Role para prueba</label>
+          <select id="testRole">
+            <option value="">Predeterminada</option>
+            <option value="factura">factura</option>
+            <option value="ticket">ticket</option>
+            <option value="label">label</option>
+            <option value="cotizacion">cotizacion</option>
+            <option value="orden_compra">orden_compra</option>
+            <option value="caja">caja</option>
+          </select>
+        </div>
+      </section>
+
+      <section>
+        <h2>Impresoras disponibles</h2>
+        <ul class="printers" id="printerList">
+          <li><span class="meta">Cargando…</span></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>API Key</h2>
+        <div class="key-box">
+          <input id="apiKey" type="text" readonly />
+          <button type="button" class="secondary" id="btnCopyKey">Copiar</button>
+          <button type="button" class="secondary" id="btnRegenKey">Regenerar</button>
+        </div>
+        <p class="hint">Usa el header <code>X-Giganet-Print-Key</code> en tu PWA. Regenerar invalida la clave anterior.</p>
+      </section>
+
+      <section>
+        <h2>Dominios permitidos (CORS)</h2>
+        <div class="field">
+          <label for="origins">Un origen por línea (incluye esquema y puerto)</label>
+          <textarea id="origins" spellcheck="false"></textarea>
+        </div>
+        <div class="row">
+          <button type="button" id="btnSaveOrigins">Guardar orígenes</button>
+        </div>
+        <p class="hint">Ejemplo: https://pos.giganet-srl.com — No uses *.</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const ROLE_DEFS = [
+      { key: 'factura', label: 'Factura (detalle)' },
+      { key: 'ticket', label: 'Ticket POS (post-cobro)' },
+      { key: 'label', label: 'Etiqueta inventario' },
+      { key: 'cotizacion', label: 'Cotización' },
+      { key: 'orden_compra', label: 'Orden de compra' },
+      { key: 'caja', label: 'Cierre de caja' },
+    ];
+
+    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {} };
+
+    function toast(message, ok = true) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.className = 'toast show ' + (ok ? 'ok' : 'err');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => { el.classList.remove('show'); }, 3200);
+    }
+
+    async function api(path, options = {}) {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      };
+      if (state.apiKey && !path.startsWith('/settings/bootstrap') && path !== '/status') {
+        headers['X-Giganet-Print-Key'] = state.apiKey;
+      }
+      const res = await fetch(path, { ...options, headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.message || 'Error de red');
+        err.code = data.error;
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
+
+    function setStatus(online, detail) {
+      document.getElementById('statusDot').className = 'dot ' + (online ? 'ok' : 'err');
+      document.getElementById('statusText').textContent = online ? 'En línea' : 'Desconectado';
+      document.getElementById('statusDetail').textContent = detail || '';
+    }
+
+    function fillPrinterSelect(select, selected, includeDefaultOption) {
+      select.innerHTML = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = includeDefaultOption ? '— Usar predeterminada —' : '— Seleccionar —';
+      select.appendChild(empty);
+
+      for (const p of state.printers) {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      }
+      if (selected) select.value = selected;
+      else select.value = '';
+    }
+
+    function renderRoleFields(roles) {
+      const wrap = document.getElementById('roleFields');
+      wrap.innerHTML = '';
+      state.printerRoles = roles || {};
+      for (const def of ROLE_DEFS) {
+        const field = document.createElement('div');
+        field.className = 'field';
+        const id = 'role_' + def.key;
+        field.innerHTML =
+          '<label for="' + id + '">' + escapeHtml(def.label) + ' <code>(' + def.key + ')</code></label>';
+        const select = document.createElement('select');
+        select.id = id;
+        select.dataset.role = def.key;
+        fillPrinterSelect(select, state.printerRoles[def.key] || '', true);
+        field.appendChild(select);
+        wrap.appendChild(field);
+      }
+    }
+
+    function renderPrinters(printers, selected) {
+      const list = document.getElementById('printerList');
+      const select = document.getElementById('defaultPrinter');
+      state.printers = printers || [];
+      list.innerHTML = '';
+
+      if (!state.printers.length) {
+        list.innerHTML = '<li><span class="meta">No hay impresoras CUPS instaladas</span></li>';
+        select.innerHTML = '<option value="">— Sin impresoras —</option>';
+        renderRoleFields(state.printerRoles);
+        return;
+      }
+
+      fillPrinterSelect(select, selected || '', false);
+
+      for (const p of state.printers) {
+        const li = document.createElement('li');
+        li.innerHTML =
+          '<span class="name">' + escapeHtml(p.name) + '</span>' +
+          '<span class="tag' + (p.default ? ' default' : '') + '">' +
+          (p.default ? 'Sistema default · ' : '') +
+          escapeHtml(p.status || '') +
+          (p.enabled === false ? ' · disabled' : '') +
+          '</span>';
+        list.appendChild(li);
+      }
+
+      renderRoleFields(state.printerRoles);
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function collectPrinterRoles() {
+      const roles = {};
+      for (const def of ROLE_DEFS) {
+        const el = document.getElementById('role_' + def.key);
+        roles[def.key] = el ? el.value : '';
+      }
+      return roles;
+    }
+
+    async function loadAll() {
+      const boot = await api('/settings/bootstrap');
+      state.apiKey = boot.apiKey || '';
+      state.port = boot.port || 9100;
+      state.printerRoles = boot.printerRoles || {};
+
+      document.getElementById('versionLabel').textContent =
+        (boot.service || 'Giganet Print Service') + ' · v' + (boot.version || '1.0.0') +
+        ' · http://127.0.0.1:' + state.port;
+
+      document.getElementById('apiKey').value = state.apiKey;
+      document.getElementById('origins').value = (boot.allowedOrigins || []).join('\n');
+
+      const status = await api('/status');
+      setStatus(status.status === 'online', 'Servicio operativo');
+
+      const { printers } = await api('/printers');
+      renderPrinters(printers, boot.defaultPrinter || '');
+    }
+
+    document.getElementById('btnRefresh').addEventListener('click', async () => {
+      try {
+        await loadAll();
+        toast('Datos actualizados');
+      } catch (e) {
+        setStatus(false, e.message);
+        toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnSavePrinter').addEventListener('click', async () => {
+      try {
+        const defaultPrinter = document.getElementById('defaultPrinter').value;
+        await api('/config', {
+          method: 'POST',
+          body: JSON.stringify({ defaultPrinter }),
+        });
+        toast('Impresora predeterminada guardada');
+        await loadAll();
+      } catch (e) {
+        toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnSaveRoles').addEventListener('click', async () => {
+      try {
+        await api('/config', {
+          method: 'POST',
+          body: JSON.stringify({ printerRoles: collectPrinterRoles() }),
+        });
+        toast('Roles de impresora guardados');
+        await loadAll();
+      } catch (e) {
+        toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnSaveOrigins').addEventListener('click', async () => {
+      try {
+        const allowedOrigins = document.getElementById('origins').value
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        await api('/config', {
+          method: 'POST',
+          body: JSON.stringify({ allowedOrigins }),
+        });
+        toast('Orígenes CORS guardados');
+        await loadAll();
+      } catch (e) {
+        toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnCopyKey').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(state.apiKey);
+        toast('API Key copiada');
+      } catch {
+        document.getElementById('apiKey').select();
+        toast('Selecciona y copia manualmente', false);
+      }
+    });
+
+    document.getElementById('btnRegenKey').addEventListener('click', async () => {
+      if (!confirm('¿Regenerar la API Key? La clave actual dejará de funcionar.')) return;
+      try {
+        const data = await api('/config', {
+          method: 'POST',
+          body: JSON.stringify({ regenerateApiKey: true }),
+        });
+        state.apiKey = data.config.apiKey;
+        document.getElementById('apiKey').value = state.apiKey;
+        toast('Nueva API Key generada');
+      } catch (e) {
+        toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnTestPrint').addEventListener('click', async () => {
+      const btn = document.getElementById('btnTestPrint');
+      btn.disabled = true;
+      try {
+        const printer = document.getElementById('defaultPrinter').value || undefined;
+        const result = await api('/test-print', {
+          method: 'POST',
+          body: JSON.stringify(printer ? { printer } : {}),
+        });
+        toast('Enviado a ' + result.printer);
+      } catch (e) {
+        toast(e.message, false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btnTestRole').addEventListener('click', async () => {
+      const btn = document.getElementById('btnTestRole');
+      btn.disabled = true;
+      try {
+        const role = document.getElementById('testRole').value || undefined;
+        const result = await api('/test-print', {
+          method: 'POST',
+          body: JSON.stringify(role ? { role } : {}),
+        });
+        toast('Enviado a ' + result.printer + (role ? ' (role ' + role + ')' : ''));
+      } catch (e) {
+        toast(e.message, false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    loadAll().catch((e) => {
+      setStatus(false, e.message);
+      toast(e.message, false);
+    });
+  </script>
+</body>
+</html>

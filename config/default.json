@@ -1,0 +1,23 @@
+{
+  "defaultPrinter": "",
+  "port": 9100,
+  "host": "127.0.0.1",
+  "apiKey": "",
+  "allowedOrigins": [
+    "https://pos.giganet-srl.com",
+    "https://www.pos.giganet-srl.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://giganet-pos.vercel.app",
+    "http://127.0.0.1:3000"
+  ],
+  "printTimeoutMs": 30000,
+  "printerRoles": {
+    "factura": "",
+    "ticket": "",
+    "label": "",
+    "cotizacion": "",
+    "orden_compra": "",
+    "caja": ""
+  }
+}
