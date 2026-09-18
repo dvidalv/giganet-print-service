@@ -65,8 +65,8 @@ router.post('/', (req, res) => {
     if (body.regenerateApiKey === true) {
       const { generateApiKey } = require('../config');
       allowed.apiKey = generateApiKey();
-    } else if (typeof body.apiKey === 'string' && body.apiKey.length >= 16) {
-      allowed.apiKey = body.apiKey;
+    } else if (typeof body.apiKey === 'string' && body.apiKey.trim().length >= 16) {
+      allowed.apiKey = body.apiKey.trim();
     }
 
     const updated = updateConfig(allowed);

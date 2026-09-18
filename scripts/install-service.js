@@ -7,6 +7,7 @@ const { execFileSync } = require('child_process');
 const {
   ensureSupportDir,
   loadConfig,
+  updateConfig,
   CONFIG_PATH,
   SUPPORT_DIR,
   SERVICE_NAME,
@@ -101,8 +102,19 @@ function main() {
   ensureDirs();
 
   const config = loadConfig({ createIfMissing: true });
+  const importedKey = String(
+    process.env.GIGANET_PRINT_KEY || process.env.GIGANET_PRINT_API_KEY || ''
+  ).trim();
+  if (importedKey.length >= 16 && importedKey !== config.apiKey) {
+    updateConfig({ apiKey: importedKey });
+    config.apiKey = importedKey;
+    console.log('API Key tomada de GIGANET_PRINT_KEY (debe coincidir con Vercel).');
+  }
   console.log(`Configuración: ${CONFIG_PATH}`);
-  console.log(`API Key generada/existente (guárdala): ${config.apiKey}`);
+  console.log(`API Key (guárdala): ${config.apiKey}`);
+  console.log(
+    'Si LPCR ya está en Vercel, esta clave DEBE ser NEXT_PUBLIC_GIGANET_PRINT_KEY. Pégala en /settings si es distinta.'
+  );
   console.log(`Directorio de soporte: ${SUPPORT_DIR}`);
 
   // Unload previous if present
