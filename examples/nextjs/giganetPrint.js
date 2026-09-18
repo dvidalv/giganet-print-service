@@ -99,10 +99,11 @@ export async function getPrinters() {
  *
  * @param {object} opts
  * @param {string} opts.data - PDF en Base64 (con o sin data: URL)
- * @param {string} [opts.printer] - Nombre CUPS; si se omite usa defaultPrinter del servicio
+ * @param {string} [opts.printer] - Nombre CUPS; si se omite usa role o defaultPrinter
+ * @param {string} [opts.role] - label | ticket | factura | estudio
  * @param {number} [opts.copies=1]
  */
-export async function printPdf({ data, printer, copies = 1 }) {
+export async function printPdf({ data, printer, role, copies = 1 }) {
   const res = await localFetch('/print', {
     method: 'POST',
     headers: authHeaders(),
@@ -110,6 +111,7 @@ export async function printPdf({ data, printer, copies = 1 }) {
       type: 'pdf',
       data,
       printer,
+      role,
       copies,
     }),
   });

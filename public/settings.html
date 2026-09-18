@@ -2,8 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Configuración del servicio local de impresión Giganet" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Giganet Print" />
   <title>Giganet Print Service — Configuración</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <style>
     :root {
       --bg: #0f1419;
@@ -37,7 +48,28 @@
     .wrap {
       max-width: 880px;
       margin: 0 auto;
-      padding: 40px 20px 64px;
+      padding: max(40px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(64px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    }
+
+    .install-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .install-bar.show { display: flex; }
+    .install-bar p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    @media (display-mode: standalone), (display-mode: minimal-ui) {
+      .install-bar { display: none !important; }
     }
 
     header {
@@ -250,12 +282,13 @@
       }
     }
   </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;650&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div class="wrap">
+    <div class="install-bar" id="installBar">
+      <p id="installHint">Instala Giganet Print para abrirla como app, sin el navegador.</p>
+      <button type="button" id="btnInstall">Instalar app</button>
+    </div>
     <header>
       <div>
         <p class="brand">Giganet <span>Print Service</span></p>
@@ -294,7 +327,7 @@
       <section>
         <h2>Impresoras por tipo de documento</h2>
         <p class="hint" style="margin-top:0;margin-bottom:14px">
-          El POS envía un <code>role</code> (ticket, factura, etc.). Vacío = usar la predeterminada.
+          LPCR envía un <code>role</code> (label, ticket, factura, estudio). Vacío = usar la predeterminada.
         </p>
         <div id="roleFields" class="role-fields"></div>
         <div class="row">
@@ -305,12 +338,10 @@
           <label for="testRole">Role para prueba</label>
           <select id="testRole">
             <option value="">Predeterminada</option>
-            <option value="factura">factura</option>
-            <option value="ticket">ticket</option>
-            <option value="label">label</option>
-            <option value="cotizacion">cotizacion</option>
-            <option value="orden_compra">orden_compra</option>
-            <option value="caja">caja</option>
+            <option value="label">label — Zebra 2×1</option>
+            <option value="ticket">ticket — Recibo 80 mm</option>
+            <option value="factura">factura — Carta 8.5×11</option>
+            <option value="estudio">estudio — Informe HP</option>
           </select>
         </div>
       </section>
@@ -329,7 +360,7 @@
           <button type="button" class="secondary" id="btnCopyKey">Copiar</button>
           <button type="button" class="secondary" id="btnRegenKey">Regenerar</button>
         </div>
-        <p class="hint">Usa el header <code>X-Giganet-Print-Key</code> en tu PWA. Regenerar invalida la clave anterior.</p>
+        <p class="hint">Usa el header <code>X-Giganet-Print-Key</code> en LPCR. Regenerar invalida la clave anterior.</p>
       </section>
 
       <section>
@@ -341,7 +372,7 @@
         <div class="row">
           <button type="button" id="btnSaveOrigins">Guardar orígenes</button>
         </div>
-        <p class="hint">Ejemplo: https://pos.giganet-srl.com — No uses *.</p>
+        <p class="hint">Ejemplo: https://lpcr.vercel.app — No uses *.</p>
       </section>
     </div>
   </div>
@@ -350,12 +381,10 @@
 
   <script>
     const ROLE_DEFS = [
-      { key: 'factura', label: 'Factura (detalle)' },
-      { key: 'ticket', label: 'Ticket POS (post-cobro)' },
-      { key: 'label', label: 'Etiqueta inventario' },
-      { key: 'cotizacion', label: 'Cotización' },
-      { key: 'orden_compra', label: 'Orden de compra' },
-      { key: 'caja', label: 'Cierre de caja' },
+      { key: 'label', label: 'Etiqueta 2×1 (Zebra)' },
+      { key: 'ticket', label: 'Recibo 80 mm (Epson POS)' },
+      { key: 'factura', label: 'Factura carta 8.5×11' },
+      { key: 'estudio', label: 'Informe de estudio 8.5×11 (HP)' },
     ];
 
     const state = { apiKey: '', port: 9100, printers: [], printerRoles: {} };
@@ -613,6 +642,69 @@
       setStatus(false, e.message);
       toast(e.message, false);
     });
+
+    (function setupPwa() {
+      const installBar = document.getElementById('installBar');
+      const installHint = document.getElementById('installHint');
+      const btnInstall = document.getElementById('btnInstall');
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches ||
+        window.navigator.standalone === true;
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then((reg) => {
+          reg.update();
+        }).catch(() => {});
+
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+          });
+        }
+      }
+
+      if (isStandalone) return;
+
+      let deferredPrompt = null;
+
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        btnInstall.hidden = false;
+        installHint.textContent = 'Instala Giganet Print para abrirla como app, sin el navegador.';
+        installBar.classList.add('show');
+      });
+
+      btnInstall.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice.catch(() => {});
+        deferredPrompt = null;
+        installBar.classList.remove('show');
+      });
+
+      window.addEventListener('appinstalled', () => {
+        deferredPrompt = null;
+        installBar.classList.remove('show');
+        toast('App instalada');
+      });
+
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      if (isSafari) {
+        btnInstall.hidden = true;
+        installHint.textContent = 'En Safari: Archivo → Añadir al Dock para usarla como app.';
+        installBar.classList.add('show');
+      } else {
+        setTimeout(() => {
+          if (deferredPrompt || installBar.classList.contains('show')) return;
+          btnInstall.hidden = true;
+          installHint.textContent =
+            'En Chrome o Edge: icono de instalar en la barra de direcciones, o menú → Instalar Giganet Print.';
+          installBar.classList.add('show');
+        }, 2500);
+      }
+    })();
   </script>
 </body>
 </html>

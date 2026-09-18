@@ -77,8 +77,8 @@ Abre en el navegador de **esa misma Mac**:
 5. En **Dominios permitidos (CORS)** deja al menos:
 
 ```text
-https://giganet-pos.vercel.app
-https://pos.giganet-srl.com
+https://lpcr.vercel.app
+https://www.contrerasrobledo.com
 http://localhost:3000
 http://127.0.0.1:3000
 ```
@@ -87,20 +87,23 @@ Si usan otro dominio, agrégalo también (**uno por línea**) y guarda.
 
 6. Pulsa **Probar impresión** (o “Probar role”) y verifica que salga la hoja de prueba
 
-| Role | Uso en el POS |
+Opcional — instalar la consola como app:
+
+- **Chrome / Edge:** pulsa **Instalar app**
+- **Safari:** Archivo → **Añadir al Dock**
+
+| Role | Uso en LPCR |
 |------|----------------|
-| `factura` | Imprimir factura (detalle) |
-| `ticket` | Ticket post-cobro |
-| `label` | Etiquetas (cuando usen impresión local) |
-| `cotizacion` | Cotizaciones |
-| `orden_compra` | Órdenes de compra |
-| `caja` | Cierre de caja |
+| `label` | Etiqueta 2×1 (Zebra) |
+| `ticket` | Recibo 80 mm (Epson POS) |
+| `factura` | Factura carta 8.5×11 |
+| `estudio` | Informe de estudio 8.5×11 (HP) |
 
 ---
 
 ## 4. Conectar el POS (Vercel)
 
-En el proyecto del POS en Vercel → **Settings → Environment Variables**:
+En el proyecto **LPCR** (Vercel) → **Settings → Environment Variables**:
 
 | Variable | Valor |
 |----------|--------|

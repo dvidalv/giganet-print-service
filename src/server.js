@@ -31,8 +31,36 @@ function createApp() {
 
   app.use(corsMiddleware);
 
+  const publicDir = path.join(__dirname, '..', 'public');
+
   // Public status (no API key) — registered before apiKey middleware
   app.use('/status', statusRoutes);
+
+  // PWA assets (manifest, service worker, icons)
+  app.get('/manifest.webmanifest', (req, res) => {
+    res.type('application/manifest+json');
+    res.set('Cache-Control', 'no-cache');
+    res.sendFile(path.join(publicDir, 'manifest.webmanifest'));
+  });
+
+  app.get('/sw.js', (req, res) => {
+    res.type('application/javascript');
+    res.set({
+      'Cache-Control': 'no-cache',
+      'Service-Worker-Allowed': '/',
+    });
+    res.sendFile(path.join(publicDir, 'sw.js'));
+  });
+
+  app.use('/icons', express.static(path.join(publicDir, 'icons'), {
+    maxAge: '7d',
+    fallthrough: false,
+  }));
+
+  app.get('/favicon.ico', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=604800');
+    res.sendFile(path.join(publicDir, 'icons', 'icon-192.png'));
+  });
 
   // Settings UI (HTML) — loopback only, no API key for the page itself
   app.get('/settings', (req, res) => {
@@ -40,7 +68,7 @@ function createApp() {
     if (host !== '127.0.0.1' && host !== 'localhost') {
       return res.status(403).send('Settings solo disponible en localhost');
     }
-    res.sendFile(path.join(__dirname, '..', 'public', 'settings.html'));
+    res.sendFile(path.join(publicDir, 'settings.html'));
   });
 
   app.get('/settings/bootstrap', (req, res) => {

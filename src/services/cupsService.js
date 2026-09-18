@@ -103,10 +103,21 @@ async function getPrinter(name) {
 /**
  * Envía un archivo a CUPS con lp.
  */
-async function printFile({ printer, filePath, copies = 1, raw = false, timeoutMs = 30000 }) {
+async function printFile({
+  printer,
+  filePath,
+  copies = 1,
+  raw = false,
+  timeoutMs = 30000,
+  lpOptions = [],
+}) {
   const args = ['-d', printer, '-n', String(copies)];
   if (raw) {
     args.push('-o', 'raw');
+  }
+  for (const opt of lpOptions || []) {
+    const value = String(opt || '').trim();
+    if (value) args.push('-o', value);
   }
   args.push(filePath);
 

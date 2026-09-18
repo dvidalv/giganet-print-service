@@ -6,16 +6,23 @@ const os = require('os');
 const crypto = require('crypto');
 
 const SERVICE_NAME = 'Giganet Print Service';
-const SERVICE_VERSION = '1.1.0';
+const SERVICE_VERSION = '1.2.0';
 
-const PRINT_ROLE_KEYS = [
-  'factura',
-  'ticket',
-  'label',
-  'cotizacion',
-  'orden_compra',
-  'caja',
-];
+/** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
+const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];
+
+/** Opciones `lp -o` por role (tamaño de papel CUPS). */
+const ROLE_LP_OPTIONS = {
+  label: ['media=Custom.2x1in', 'fit-to-page'],
+  ticket: ['fit-to-page'],
+  factura: ['media=Letter', 'fit-to-page'],
+  estudio: ['media=Letter', 'fit-to-page'],
+};
+
+function lpOptionsForRole(role) {
+  const key = String(role || '').trim().toLowerCase();
+  return ROLE_LP_OPTIONS[key] ? [...ROLE_LP_OPTIONS[key]] : [];
+}
 
 const SUPPORT_DIR = path.join(
   os.homedir(),
@@ -97,8 +104,12 @@ function loadConfig({ createIfMissing = true } = {}) {
   if (!merged.apiKey) {
     merged.apiKey = generateApiKey();
     writeConfig(merged);
-  } else if (!parsed.printerRoles) {
-    // Persist new printerRoles field for upgrades
+  } else if (
+    !parsed.printerRoles ||
+    PRINT_ROLE_KEYS.some(
+      (key) => !Object.prototype.hasOwnProperty.call(parsed.printerRoles, key)
+    )
+  ) {
     writeConfig(merged);
   }
 
@@ -235,6 +246,8 @@ module.exports = {
   SERVICE_NAME,
   SERVICE_VERSION,
   PRINT_ROLE_KEYS,
+  ROLE_LP_OPTIONS,
+  lpOptionsForRole,
   SUPPORT_DIR,
   CONFIG_PATH,
   ensureSupportDir,

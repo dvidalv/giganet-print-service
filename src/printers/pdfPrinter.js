@@ -15,7 +15,7 @@ function assertValidPdf(buffer) {
 /**
  * Imprime un PDF en Base64 mediante CUPS (lp).
  */
-async function printPdf({ printer, data, copies = 1, timeoutMs = 30000 }) {
+async function printPdf({ printer, data, copies = 1, timeoutMs = 30000, lpOptions = [] }) {
   const buffer = decodeBase64(data);
   assertValidPdf(buffer);
 
@@ -26,6 +26,7 @@ async function printPdf({ printer, data, copies = 1, timeoutMs = 30000 }) {
       copies,
       raw: false,
       timeoutMs,
+      lpOptions,
     });
     return {
       success: true,

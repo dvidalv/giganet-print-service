@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Giganet Print">
+  <rect width="512" height="512" rx="112" fill="#0f1419"/>
+  <rect x="156" y="72" width="200" height="176" rx="20" fill="#e8eef5"/>
+  <rect x="188" y="108" width="136" height="14" rx="7" fill="#b4c2d2"/>
+  <rect x="188" y="140" width="104" height="14" rx="7" fill="#b4c2d2"/>
+  <rect x="88" y="216" width="336" height="208" rx="40" fill="#1a9f7a"/>
+  <rect x="140" y="248" width="232" height="28" rx="10" fill="#0f1419"/>
+  <circle cx="372" cy="348" r="18" fill="#e8eef5"/>
+</svg>

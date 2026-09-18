@@ -27,6 +27,8 @@ Abre la consola de configuración:
 
 [http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings)
 
+Para usarla como app (PWA): en Chrome/Edge pulsa **Instalar app**; en Safari, **Archivo → Añadir al Dock**.
+
 Arranque manual (sin LaunchAgent):
 
 ```bash
@@ -90,7 +92,7 @@ Resolución de impresora:
 3. Si no, `defaultPrinter`
 4. Si no hay ninguna → `NO_DEFAULT_PRINTER`
 
-Roles válidos: `factura`, `ticket`, `label`, `cotizacion`, `orden_compra`, `caja`.
+Roles válidos (LPCR): `label` (Zebra 2×1), `ticket` (recibo Epson 80 mm), `factura` (carta 8.5×11), `estudio` (informe HP 8.5×11).
 
 Tipos:
 
@@ -132,19 +134,17 @@ Archivo de configuración:
   "host": "127.0.0.1",
   "apiKey": "…",
   "allowedOrigins": [
-    "https://pos.giganet-srl.com",
-    "https://www.pos.giganet-srl.com",
+    "https://lpcr.vercel.app",
+    "https://www.contrerasrobledo.com",
     "http://localhost:3000",
     "http://localhost:3001"
   ],
   "printTimeoutMs": 30000,
   "printerRoles": {
-    "factura": "",
+    "label": "Zebra_2x1",
     "ticket": "EPSON_TM_T20III",
-    "label": "",
-    "cotizacion": "",
-    "orden_compra": "",
-    "caja": ""
+    "factura": "HP_LaserJet",
+    "estudio": "HP_LaserJet"
   }
 }
 ```
@@ -158,7 +158,7 @@ Logs:
 ## Integración PWA / Next.js
 
 1. Añade tu dominio de producción a `allowedOrigins` (UI `/settings` o `POST /config`)
-2. Copia `examples/nextjs/giganetPrint.js` a tu app (p. ej. `lib/giganetPrint.js`)
+2. Copia `examples/nextjs/giganetPrint.js` a LPCR (`lib/printService.js`)
 3. Define la API Key (idealmente solo en clientes de confianza / POS internos):
 
 ```bash
@@ -230,9 +230,15 @@ Este repositorio **no** implementa HTTPS local con certificados inseguros a prop
 ```
 giganet-print-service/
 ├── config/default.json
-├── public/settings.html
-├── scripts/install-service.js
-├── scripts/uninstall-service.js
+├── public/
+│   ├── settings.html
+│   ├── manifest.webmanifest
+│   ├── sw.js
+│   └── icons/
+├── scripts/
+│   ├── install-service.js
+│   ├── uninstall-service.js
+│   └── generate-pwa-icons.js
 ├── examples/nextjs/
 ├── src/
 │   ├── server.js
@@ -244,6 +250,16 @@ giganet-print-service/
 │   └── utils/
 └── package.json
 ```
+
+## Instalar la consola como PWA
+
+`/settings` es una PWA instalable (manifiesto + service worker + iconos). El servicio ya corre en `127.0.0.1`, que es un contexto seguro.
+
+1. Abre [http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings)
+2. **Chrome / Edge:** pulsa **Instalar app** (o el icono de instalar en la barra)
+3. **Safari (macOS):** Archivo → **Añadir al Dock**
+
+La API y el POS no cambian: la PWA es solo la consola de configuración, con icono en Dock/escritorio y ventana propia.
 
 ## LaunchAgent
 

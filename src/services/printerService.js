@@ -1,6 +1,11 @@
 'use strict';
 
-const { getConfig, resolvePrinterNameFromConfig, PRINT_ROLE_KEYS } = require('../config');
+const {
+  getConfig,
+  resolvePrinterNameFromConfig,
+  PRINT_ROLE_KEYS,
+  lpOptionsForRole,
+} = require('../config');
 const cupsService = require('./cupsService');
 const pdfPrinter = require('../printers/pdfPrinter');
 const rawPrinter = require('../printers/rawPrinter');
@@ -96,6 +101,7 @@ async function printDocument(payload) {
         data: payload.data,
         copies,
         timeoutMs,
+        lpOptions: lpOptionsForRole(role),
       });
     case 'raw':
       return rawPrinter.printRaw({
@@ -137,12 +143,24 @@ function buildTestPdf({ printerName, when, role }) {
     'Servicio: OK',
   ].filter(Boolean);
 
-  // Simple PDF with Helvetica text
+  let mediaBox = [0, 0, 612, 792];
+  let startY = 750;
+  let fontSize = 16;
+  if (role === 'label') {
+    mediaBox = [0, 0, 144, 72];
+    startY = 56;
+    fontSize = 7;
+  } else if (role === 'ticket') {
+    mediaBox = [0, 0, 227, 400];
+    startY = 370;
+    fontSize = 11;
+  }
+
   const contentLines = [
     'BT',
-    '/F1 16 Tf',
-    '50 750 Td',
-    '20 TL',
+    `/F1 ${fontSize} Tf`,
+    `${role === 'label' ? 8 : 50} ${startY} Td`,
+    `${role === 'label' ? 9 : 20} TL`,
   ];
   lines.forEach((line, i) => {
     const escaped = line.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
@@ -160,7 +178,7 @@ function buildTestPdf({ printerName, when, role }) {
   objects.push('1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n');
   objects.push('2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n');
   objects.push(
-    '3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n'
+    `3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [${mediaBox.join(' ')}] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj\n`
   );
   objects.push(
     `4 0 obj<< /Length ${Buffer.byteLength(stream, 'utf8')} >>stream\n${stream}\nendstream\nendobj\n`
@@ -204,6 +222,7 @@ async function testPrint(opts = {}) {
 
   return printDocument({
     printer,
+    role,
     type: 'pdf',
     data,
     copies: 1,
