@@ -69,6 +69,7 @@ function createApp() {
     if (host !== '127.0.0.1' && host !== 'localhost') {
       return res.status(403).send('Settings solo disponible en localhost');
     }
+    res.set('Cache-Control', 'no-cache');
     res.sendFile(path.join(publicDir, 'settings.html'));
   });
 

@@ -863,15 +863,65 @@
         window.navigator.standalone === true;
 
       if ('serviceWorker' in navigator) {
+        let reloading = false;
+        function reloadForUpdate() {
+          if (reloading) return;
+          reloading = true;
+          toast('Nueva versión. Recargando…');
+          setTimeout(() => window.location.reload(), 400);
+        }
+
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).then((reg) => {
-          reg.update();
+          if (reg.waiting) reloadForUpdate();
+          reg.addEventListener('updatefound', () => {
+            const worker = reg.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                reloadForUpdate();
+              }
+            });
+          });
         }).catch(() => {});
 
         if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-          });
+          navigator.serviceWorker.addEventListener('controllerchange', reloadForUpdate);
         }
+
+        let knownVersion = '';
+        let knownAssets = '';
+
+        async function checkForUpdates() {
+          try {
+            const regs = await navigator.serviceWorker.getRegistration();
+            if (regs) await regs.update();
+          } catch {
+            /* ignore */
+          }
+          try {
+            const data = await fetch('/status', { cache: 'no-store' }).then((res) => res.json());
+            if (!knownVersion) {
+              knownVersion = data.version || '';
+              knownAssets = data.assets || '';
+              return;
+            }
+            if (
+              (data.version && data.version !== knownVersion) ||
+              (data.assets && knownAssets && data.assets !== knownAssets)
+            ) {
+              reloadForUpdate();
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        checkForUpdates();
+        setInterval(checkForUpdates, 30000);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkForUpdates();
+        });
+        window.addEventListener('focus', checkForUpdates);
       }
 
       if (isStandalone) return;
