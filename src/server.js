@@ -19,7 +19,7 @@ const printersRoutes = require('./routes/printers');
 const printRoutes = require('./routes/print');
 const configRoutes = require('./routes/config');
 const testPrintRoutes = require('./routes/testPrint');
-const shutdownRoutes = require('./routes/shutdown');
+const { handleShutdown } = require('./routes/shutdown');
 
 function createApp() {
   const app = express();
@@ -89,13 +89,15 @@ function createApp() {
     });
   });
 
+  app.post('/settings/shutdown', handleShutdown);
+  app.post('/shutdown', handleShutdown);
+
   // Protected API
   app.use(apiKeyMiddleware);
   app.use('/printers', printersRoutes);
   app.use('/print', printRoutes);
   app.use('/config', configRoutes);
   app.use('/test-print', testPrintRoutes);
-  app.use('/shutdown', shutdownRoutes);
 
   app.get('/', (req, res) => {
     res.json({

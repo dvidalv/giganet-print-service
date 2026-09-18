@@ -455,7 +455,7 @@
         'Content-Type': 'application/json',
         ...(options.headers || {}),
       };
-      if (state.apiKey && !path.startsWith('/settings/bootstrap') && path !== '/status') {
+      if (state.apiKey && !path.startsWith('/settings/') && path !== '/status') {
         headers['X-Giganet-Print-Key'] = state.apiKey;
       }
       const res = await fetch(path, { ...options, headers });
@@ -753,11 +753,31 @@
       }
       const btn = document.getElementById('btnStopService');
       btn.disabled = true;
+      const stale =
+        'Este proceso aún no tiene apagado. En Terminal: git pull && npm run install-service (debe decir v1.2.4) y recarga /settings.';
       try {
-        await api('/shutdown', { method: 'POST', body: JSON.stringify({}) });
+        await api('/settings/shutdown', { method: 'POST', body: JSON.stringify({}) });
         setStatus(false, 'Servicio detenido');
         toast('Servicio detenido. Para volver: npm run install-service');
       } catch (e) {
+        if (e.status === 404 || e.code === 'NOT_FOUND') {
+          try {
+            await api('/config', {
+              method: 'POST',
+              body: JSON.stringify({ stopService: true }),
+            });
+            setStatus(false, 'Servicio detenido');
+            toast('Servicio detenido. Para volver: npm run install-service');
+            return;
+          } catch (e2) {
+            btn.disabled = false;
+            toast(
+              e2.status === 404 || e2.code === 'NOT_FOUND' ? stale : e2.message,
+              false
+            );
+            return;
+          }
+        }
         if (e.status) {
           btn.disabled = false;
           toast(e.message, false);

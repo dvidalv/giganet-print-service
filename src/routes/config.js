@@ -53,6 +53,10 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const body = req.body || {};
+    if (body.stopService === true) {
+      const { handleShutdown } = require('./shutdown');
+      return handleShutdown(req, res);
+    }
     const allowed = {};
     if (body.defaultPrinter !== undefined) allowed.defaultPrinter = body.defaultPrinter;
     if (body.allowedOrigins !== undefined) allowed.allowedOrigins = body.allowedOrigins;

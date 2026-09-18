@@ -1,17 +1,14 @@
 'use strict';
 
-const express = require('express');
 const logger = require('../utils/logger');
 const { stopLaunchAgent } = require('../utils/launchAgent');
-
-const router = express.Router();
 
 function isLoopbackHost(req) {
   const host = (req.get('Host') || '').split(':')[0].toLowerCase();
   return host === '127.0.0.1' || host === 'localhost';
 }
 
-router.post('/', (req, res) => {
+function handleShutdown(req, res) {
   if (!isLoopbackHost(req)) {
     return res.status(403).json({
       success: false,
@@ -25,7 +22,7 @@ router.post('/', (req, res) => {
     return res.status(503).json({
       success: false,
       error: 'SHUTDOWN_UNAVAILABLE',
-      message: 'Este proceso no admite apagado',
+      message: 'Este proceso no admite apagado. Reinicia con npm run install-service.',
     });
   }
 
@@ -38,7 +35,7 @@ router.post('/', (req, res) => {
   }
 
   logger.requestLog({
-    endpoint: '/shutdown',
+    endpoint: req.path,
     success: true,
     message: 'Apagado solicitado desde /settings',
   });
@@ -55,6 +52,6 @@ router.post('/', (req, res) => {
       setTimeout(() => process.exit(0), 2500).unref();
     }, 150);
   });
-});
+}
 
-module.exports = router;
+module.exports = { handleShutdown };
