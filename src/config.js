@@ -6,7 +6,7 @@ const os = require('os');
 const crypto = require('crypto');
 
 const SERVICE_NAME = 'Giganet Print Service';
-const SERVICE_VERSION = '1.2.2';
+const SERVICE_VERSION = '1.2.3';
 
 /** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
 const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];

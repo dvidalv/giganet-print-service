@@ -1,6 +1,6 @@
 {
   "name": "giganet-print-service",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Servicio local de impresión para macOS — API HTTP para imprimir desde PWA/web sin diálogo del navegador",
   "main": "src/server.js",
   "type": "commonjs",

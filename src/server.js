@@ -19,6 +19,7 @@ const printersRoutes = require('./routes/printers');
 const printRoutes = require('./routes/print');
 const configRoutes = require('./routes/config');
 const testPrintRoutes = require('./routes/testPrint');
+const shutdownRoutes = require('./routes/shutdown');
 
 function createApp() {
   const app = express();
@@ -94,6 +95,7 @@ function createApp() {
   app.use('/print', printRoutes);
   app.use('/config', configRoutes);
   app.use('/test-print', testPrintRoutes);
+  app.use('/shutdown', shutdownRoutes);
 
   app.get('/', (req, res) => {
     res.json({
@@ -142,6 +144,7 @@ function start() {
 
   const app = createApp();
   const server = http.createServer(app);
+  app.set('httpServer', server);
 
   server.listen(port, host, () => {
     logger.info(`${SERVICE_NAME} v${SERVICE_VERSION} escuchando`, {

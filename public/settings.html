@@ -237,6 +237,11 @@
       border: 1px solid var(--border);
     }
     button.secondary:hover { background: #2c3b4f; }
+    button.danger {
+      background: var(--danger);
+      color: #fff;
+    }
+    button.danger:hover { background: #b53b3b; }
     button:disabled {
       opacity: 0.55;
       cursor: not-allowed;
@@ -348,8 +353,9 @@
         <div class="row">
           <button type="button" class="secondary" id="btnRefresh">Actualizar</button>
           <button type="button" id="btnTestPrint">Probar impresión</button>
+          <button type="button" class="danger" id="btnStopService">Detener servicio</button>
         </div>
-        <p class="hint">La prueba genera un PDF corto y lo envía a la impresora predeterminada (o a la seleccionada).</p>
+        <p class="hint">Cerrar esta ventana (PWA) no apaga el servicio. «Detener servicio» sí: quita el autoarranque y cierra el proceso. Para volver: <code>npm run install-service</code>.</p>
       </section>
 
       <section>
@@ -734,6 +740,31 @@
         toast('Nueva API Key generada');
       } catch (e) {
         toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnStopService').addEventListener('click', async () => {
+      if (
+        !confirm(
+          '¿Detener Giganet Print Service en esta Mac?\n\nDejará de imprimir desde LPCR hasta que ejecutes npm run install-service. La API Key y las impresoras no se borran.'
+        )
+      ) {
+        return;
+      }
+      const btn = document.getElementById('btnStopService');
+      btn.disabled = true;
+      try {
+        await api('/shutdown', { method: 'POST', body: JSON.stringify({}) });
+        setStatus(false, 'Servicio detenido');
+        toast('Servicio detenido. Para volver: npm run install-service');
+      } catch (e) {
+        if (e.status) {
+          btn.disabled = false;
+          toast(e.message, false);
+          return;
+        }
+        setStatus(false, 'Servicio detenido');
+        toast('Servicio detenido. Para volver: npm run install-service');
       }
     });
 
