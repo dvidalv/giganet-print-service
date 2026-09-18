@@ -1,19 +1,28 @@
-# Instalación — Giganet Print Service (Mac del cliente)
+# Manual de instalación — Giganet Print Service (LPCR)
 
-Guía para instalar el servicio de impresión local en la **Mac de caja** del cliente.  
-El POS en internet (Vercel) **no imprime solo**: necesita este servicio corriendo en la misma Mac donde está la impresora.
+Servicio **local de macOS**. LPCR en internet (`https://app.contrerasrobledo.com`) no imprime solo: en **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, con las impresoras de **esa** computadora.
+
+No se instala en Windows. No se copia `node_modules` ni el LaunchAgent de otra Mac.
+
+---
+
+## Idea clave: una sola API Key
+
+LPCR en Vercel lleva embebida `NEXT_PUBLIC_GIGANET_PRINT_KEY`.
+
+- **Primera Mac (o primer setup de Vercel):** se genera una key, se copia a Vercel y se hace **redeploy**.
+- **Mac siguientes:** el instalador genera *otra* key. **No la uses.** Pega la **misma** de Vercel / de la Mac que ya imprime.
+
+Si las keys no coinciden, producción no autentica contra esa Mac.
 
 ---
 
 ## Requisitos
 
-- macOS (Apple Silicon o Intel)
-- Cuenta de usuario con la que se usará el POS en esa Mac
-- Impresora instalada en el sistema (Preferencias del Sistema → Impresoras)
-- **Node.js 20 LTS o superior**  
-  Descarga: https://nodejs.org  
-  o con Homebrew: `brew install node`
-- Acceso a la carpeta del proyecto `giganet-print-service` (USB, Drive, o clone de Git)
+- macOS 12+ (Apple Silicon o Intel)
+- Usuario con el que se abrirá Chrome y LPCR
+- **Node.js 20 LTS o superior** — https://nodejs.org o `brew install node`
+- Impresoras agregadas en **Ajustes del Sistema → Impresoras y escáneres** (CUPS)
 
 Comprobar Node:
 
@@ -24,123 +33,167 @@ npm -v
 
 ---
 
-## 1. Copiar el proyecto a la Mac
+## 1. Copiar el proyecto
 
-Coloca la carpeta en un sitio estable, por ejemplo:
+Carpeta fija (el autoarranque apunta a esta ruta; no la borres):
 
 ```text
 ~/Applications/giganet-print-service
 ```
 
-o
+**Git (recomendado):**
 
-```text
-~/Projects/giganet-print-service
+```bash
+mkdir -p ~/Applications
+cd ~/Applications
+git clone https://github.com/dvidalv/giganet-print-service.git
+cd giganet-print-service
 ```
 
-> No borres esta carpeta después de instalar: el LaunchAgent apunta a esos archivos.
+**USB / AirDrop:** copia la carpeta del repo **sin** `node_modules`.
 
 ---
 
-## 2. Instalar dependencias y el servicio
-
-Abre **Terminal**, entra a la carpeta e instala:
+## 2. Instalar e iniciar el servicio
 
 ```bash
-cd ~/Applications/giganet-print-service   # ajusta la ruta
+cd ~/Applications/giganet-print-service
 npm install
+```
+
+### Mac adicional (ya hay key en Vercel)
+
+Pega la key de producción en el comando:
+
+```bash
+GIGANET_PRINT_KEY='PEGA_AQUI_LA_KEY_DE_VERCEL' npm run install-service
+```
+
+### Primera Mac (aún no hay key en Vercel)
+
+```bash
 npm run install-service
 ```
 
-`install-service` hace esto:
+`install-service` crea:
 
-1. Crea la configuración en  
-   `~/Library/Application Support/GiganetPrintService/config.json`
-2. Genera una **API Key** segura (si no existía)
-3. Crea el LaunchAgent  
-   `~/Library/LaunchAgents/com.giganet.printservice.plist`
-4. Registra e inicia el servicio (arranca también al iniciar sesión)
+1. `~/Library/Application Support/GiganetPrintService/config.json`
+2. API Key (nueva, o la de `GIGANET_PRINT_KEY`)
+3. LaunchAgent `com.giganet.printservice` (arranca al iniciar sesión)
 
----
-
-## 3. Configurar en la pantalla local
-
-Abre en el navegador de **esa misma Mac**:
-
-[http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings)
-
-1. Comprueba que el estado diga **En línea**
-2. Selecciona la **impresora predeterminada** → Guardar
-3. (Opcional) En **Impresoras por tipo de documento**, asigna p. ej. `ticket` → térmica, `label` → etiquetadora → Guardar roles  
-   Vacío = usa la predeterminada.
-4. Pulsa **Copiar** en la API Key (guárdala; la necesitarás en el POS)
-5. En **Dominios permitidos (CORS)** deja al menos:
-
-```text
-https://lpcr.vercel.app
-https://www.contrerasrobledo.com
-http://localhost:3000
-http://127.0.0.1:3000
-```
-
-Si usan otro dominio, agrégalo también (**uno por línea**) y guarda.
-
-6. Pulsa **Probar impresión** (o “Probar role”) y verifica que salga la hoja de prueba
-
-Opcional — instalar la consola como app:
-
-- **Chrome / Edge:** pulsa **Instalar app**
-- **Safari:** Archivo → **Añadir al Dock**
-
-| Role | Uso en LPCR |
-|------|----------------|
-| `label` | Etiqueta 2×1 (Zebra) |
-| `ticket` | Recibo 80 mm (Epson POS) |
-| `factura` | Factura carta 8.5×11 |
-| `estudio` | Informe de estudio 8.5×11 (HP) |
-
----
-
-## 4. Conectar el POS (Vercel)
-
-En el proyecto **LPCR** (Vercel) → **Settings → Environment Variables**:
-
-| Variable | Valor |
-|----------|--------|
-| `NEXT_PUBLIC_GIGANET_PRINT_URL` | `http://127.0.0.1:9100` |
-| `NEXT_PUBLIC_GIGANET_PRINT_KEY` | *(la API Key copiada en `/settings`)* |
-
-Aplícalas a **Production** (y Preview si quieres).  
-Después: **Redeploy** obligatorio — las variables `NEXT_PUBLIC_*` se embeben en el build.
-
-### Error típico
-
-> «Falta la API Key del servicio local. Se abrió el PDF en el navegador.»
-
-Significa: el servicio en la Mac **sí responde**, pero el POS en Vercel **no tiene** `NEXT_PUBLIC_GIGANET_PRINT_KEY` (o no se redeployó tras añadirla).
-
----
-
-## 5. Probar desde el POS
-
-1. En la Mac de caja, abre el POS (`https://pos.giganet-srl.com` o la URL del cliente)
-2. Cobra una venta → **Imprimir ticket**  
-   o abre una factura → **Imprimir factura**
-3. Debe imprimir **sin** el diálogo del navegador
-
-Si el servicio no está corriendo, el POS abre el PDF en una pestaña (fallback).
-
-Comprobar solo el servicio:
+Comprobar:
 
 ```bash
 curl http://127.0.0.1:9100/status
 ```
 
-Respuesta esperada:
+Esperado:
 
 ```json
-{ "status": "online", "service": "Giganet Print Service", "version": "1.0.0" }
+{ "status": "online", "service": "Giganet Print Service", "version": "1.2.1" }
 ```
+
+---
+
+## 3. Impresoras en esta Mac
+
+El servicio **solo lista colas CUPS de esta computadora**. No hereda las de otra Mac.
+
+1. **Ajustes del Sistema → Impresoras y escáneres → Agregar** (USB, red o IP).
+2. En Terminal:
+
+```bash
+lpstat -p
+lpstat -d
+```
+
+Debe aparecer `printer NOMBRE is idle` (o equivalente). Si no hay destinos, agrégalas en Ajustes y vuelve a `lpstat -p`.
+
+---
+
+## 4. Configurar en /settings
+
+En **esa** Mac abre:
+
+[http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings)
+
+Estado: **En línea**.
+
+### API Key
+
+1. Si instalaste **sin** `GIGANET_PRINT_KEY`, pega la de Vercel (o de la Mac que ya imprime).
+2. **Guardar clave**.
+3. **No pulses Regenerar** en una Mac extra (rompería el POS hasta un redeploy).
+
+### Dominios permitidos (CORS)
+
+Uno por línea → **Guardar orígenes**:
+
+```text
+https://app.contrerasrobledo.com
+https://lpcr.vercel.app
+https://www.contrerasrobledo.com
+https://contrerasrobledo.com
+http://localhost:3000
+http://localhost:3001
+http://127.0.0.1:3000
+```
+
+### Impresoras y roles
+
+1. Elige **impresora predeterminada** → **Guardar impresora**.
+2. En **Impresoras por tipo de documento**, pulsa la cola de cada tipo (lista visible, no el menú nativo de macOS) → **Guardar roles**.
+
+| Role | Documento en LPCR | Impresora típica |
+|------|-------------------|------------------|
+| `label` | Etiqueta 2×1 | Zebra |
+| `ticket` | Recibo 80 mm | Epson POS |
+| `factura` | Factura carta 8.5×11 | HP / láser |
+| `estudio` | Informe de estudio 8.5×11 | HP / láser |
+
+Vacío = usa la predeterminada.
+
+3. **Probar impresión** y **Probar role**.
+
+Opcional — consola como app: Chrome/Edge **Instalar app**; Safari **Archivo → Añadir al Dock**.
+
+---
+
+## 5. Primera vez: variables en Vercel (proyecto LPCR)
+
+Solo hace falta **una vez** para todo el laboratorio. No se cambia al añadir otra Mac.
+
+| Variable | Valor |
+|----------|--------|
+| `NEXT_PUBLIC_GIGANET_PRINT_URL` | `http://127.0.0.1:9100` |
+| `NEXT_PUBLIC_GIGANET_PRINT_KEY` | la API Key de `/settings` (la que van a compartir todas las Mac) |
+
+Production (y Preview si aplica) → **Redeploy**. Las `NEXT_PUBLIC_*` se embeben en el build.
+
+---
+
+## 6. Imprimir desde LPCR
+
+1. En esa Mac abre https://app.contrerasrobledo.com
+2. Estudio, factura o recibo → **Imprimir**.
+3. Chrome 142+ pide permiso de **red local** para hablar con `127.0.0.1`. Pulsa **Permitir**.
+
+Si lo bloqueaste: candado de la barra → configuración del sitio → **Red local** → **Permitir** → recarga e imprime de nuevo.
+
+La impresión sale en silencio a CUPS, sin el diálogo del navegador.
+
+---
+
+## 7. Actualizar el servicio
+
+```bash
+cd ~/Applications/giganet-print-service
+git pull
+npm install
+npm run install-service
+```
+
+Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela otra vez). Comprueba la versión en el encabezado.
 
 ---
 
@@ -149,62 +202,75 @@ Respuesta esperada:
 | Acción | Comando |
 |--------|---------|
 | Arranque manual (sin LaunchAgent) | `npm start` |
-| Instalar / reinstalar autoarranque | `npm run install-service` |
+| Instalar / reiniciar autoarranque | `npm run install-service` |
+| Instalar con la key de Vercel | `GIGANET_PRINT_KEY='…' npm run install-service` |
 | Quitar autoarranque | `npm run uninstall-service` |
-| Ver settings | http://127.0.0.1:9100/settings |
+| Health check | `curl http://127.0.0.1:9100/status` |
+| Listar colas CUPS | `lpstat -p` |
 
-`uninstall-service` **no** borra la configuración ni la API Key del usuario.
+`uninstall-service` **no** borra `config.json` ni la API Key.
 
 ---
 
-## Ubicaciones en macOS
+## Dónde queda todo
 
 | Qué | Ruta |
 |-----|------|
+| Proyecto | `~/Applications/giganet-print-service` (o la que usaste) |
 | Configuración / API Key | `~/Library/Application Support/GiganetPrintService/config.json` |
-| Logs del servicio | `~/Library/Logs/GiganetPrintService/` |
+| Logs | `~/Library/Logs/GiganetPrintService/` |
 | LaunchAgent | `~/Library/LaunchAgents/com.giganet.printservice.plist` |
 
 ---
 
 ## Problemas frecuentes
 
-### Falta la API Key / se abre el PDF
+### Chrome bloqueó 127.0.0.1
 
-1. Copia la key desde http://127.0.0.1:9100/settings  
-2. Ponla en Vercel como `NEXT_PUBLIC_GIGANET_PRINT_KEY`  
-3. **Redeploy** Production  
-4. Recarga el POS (hard refresh)
+Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). CORS de `/settings` debe incluir ese origen.
 
-### El POS dice que el servicio no está conectado
+### Impresoras disponibles vacío / solo «Usar predeterminada»
 
-- ¿Está el servicio corriendo? Abre http://127.0.0.1:9100/status  
-- En Chrome, acepta el permiso de **acceso a red local** si aparece  
-- Confirma que el origen del POS esté en la lista CORS de `/settings`
+CUPS no tiene colas en **esta** Mac. `lpstat -p`, agregar en Ajustes, **Actualizar** en `/settings`. Los nombres no tienen que coincidir con otra Mac: se mapean en roles.
 
-### Imprime en el navegador pero no en la impresora
+### La Mac nueva no imprime desde producción
 
-- Revisa impresora predeterminada y **Probar impresión** en `/settings`  
-- La impresora debe estar habilitada en CUPS
+La API Key local no es la de Vercel. Pégala en `/settings` → **Guardar clave**. No regeneres. No hace falta redeploy si reutilizas la key existente.
 
-### El cliente cambió de Mac
+### «Falta la API Key del servicio local»
 
-Repite esta guía en la Mac nueva (nueva API Key) y actualiza la variable en Vercel.
+Vercel no tiene `NEXT_PUBLIC_GIGANET_PRINT_KEY` o no hubo redeploy tras ponerla. Es el setup **inicial**, no cada Mac nueva.
 
----
+### El servicio no está en línea
 
-## Checklist
+```bash
+curl http://127.0.0.1:9100/status
+npm run install-service
+```
 
-- [ ] Node.js instalado  
-- [ ] `npm install` + `npm run install-service`  
-- [ ] Impresora predeterminada elegida en `/settings`  
-- [ ] (Opcional) Roles ticket/label/etc. asignados  
-- [ ] API Key copiada  
-- [ ] Orígenes CORS con la URL del POS  
-- [ ] `NEXT_PUBLIC_GIGANET_PRINT_URL` y `_KEY` en Vercel  
-- [ ] Redeploy Production  
-- [ ] Prueba: **Imprimir ticket** desde una venta  
+### Cambió de Mac
+
+Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en CUPS de esa máquina.
 
 ---
 
-Documentación técnica adicional: `README.md` en el mismo proyecto.
+## Checklist por Mac
+
+- [ ] Node.js 20+
+- [ ] Repo en carpeta estable (`git clone` o copia sin `node_modules`)
+- [ ] Impresoras en Ajustes del Sistema (`lpstat -p` las lista)
+- [ ] `npm install` + `npm run install-service` (con `GIGANET_PRINT_KEY` si ya existe Vercel)
+- [ ] http://127.0.0.1:9100/status → `online`
+- [ ] `/settings`: API Key **igual** a Vercel → Guardar clave
+- [ ] CORS con `https://app.contrerasrobledo.com`
+- [ ] Predeterminada + roles → Guardar → prueba de impresión
+- [ ] En Chrome, **Permitir** red local al imprimir desde LPCR
+
+**Solo en el primer setup del laboratorio**
+
+- [ ] Variables `NEXT_PUBLIC_GIGANET_PRINT_URL` y `_KEY` en Vercel
+- [ ] Redeploy Production
+
+---
+
+Detalle técnico del API: `README.md`.
