@@ -9,6 +9,15 @@ function isLocalHost(hostHeader) {
   return host === '127.0.0.1' || host === 'localhost';
 }
 
+function isLoopbackOrigin(origin) {
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname === '127.0.0.1' || hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
 function corsMiddleware(req, res, next) {
   const config = getConfig();
   const origin = req.get('Origin');
@@ -28,15 +37,12 @@ function corsMiddleware(req, res, next) {
     });
   }
 
-  if (!allowed.includes(origin)) {
-    // Always allow the settings page origin (local service itself)
-    if (origin === `http://127.0.0.1:${config.port}` || origin === `http://localhost:${config.port}`) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Vary', 'Origin');
-      return handlePreflight(req, res, next);
-    }
+  const settingsOrigin =
+    origin === `http://127.0.0.1:${config.port}` ||
+    origin === `http://localhost:${config.port}`;
 
+  // Loopback pages (cualquier puerto de Next) pueden hablar con el servicio local
+  if (!allowed.includes(origin) && !settingsOrigin && !isLoopbackOrigin(origin)) {
     logger.warn('Origen CORS no permitido', { origin, endpoint: req.path });
     return res.status(403).json({
       success: false,
@@ -56,16 +62,9 @@ function handlePreflight(req, res, next) {
     'Access-Control-Allow-Methods',
     'GET, POST, OPTIONS'
   );
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'Content-Type, X-Giganet-Print-Key'
-  );
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Giganet-Print-Key');
   res.setHeader('Access-Control-Max-Age', '86400');
-
-  // Chrome Local Network Access / Private Network Access preflight support
-  if (req.get('Access-Control-Request-Private-Network') === 'true') {
-    res.setHeader('Access-Control-Allow-Private-Network', 'true');
-  }
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
