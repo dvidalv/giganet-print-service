@@ -229,6 +229,18 @@ Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela o
 
 Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). CORS de `/settings` debe incluir ese origen.
 
+### Settings dice Desconectado / `lpstat: Bad file descriptor`
+
+El HTTP del servicio está bien; falló CUPS. En esa Mac:
+
+```bash
+cd ~/Applications/giganet-print-service
+git pull
+npm run install-service
+```
+
+Si Terminal `lpstat -p` también falla, CUPS no está activo: agrega una impresora en Ajustes del Sistema o `sudo launchctl kickstart -k system/org.cups.cupsd`.
+
 ### Impresoras disponibles vacío / solo «Usar predeterminada»
 
 CUPS no tiene colas en **esta** Mac. `lpstat -p`, agregar en Ajustes, **Actualizar** en `/settings`. Los nombres no tienen que coincidir con otra Mac: se mapean en roles.

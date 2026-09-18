@@ -625,8 +625,18 @@
       const status = await api('/status');
       setStatus(status.status === 'online', 'Servicio operativo');
 
-      const { printers } = await api('/printers');
-      renderPrinters(printers, boot.defaultPrinter || '');
+      try {
+        const { printers } = await api('/printers');
+        renderPrinters(printers, boot.defaultPrinter || '');
+      } catch (e) {
+        renderPrinters([], boot.defaultPrinter || '');
+        const list = document.getElementById('printerList');
+        list.innerHTML =
+          '<li><span class="meta">' +
+          escapeHtml(e.message || 'No se pudieron listar las impresoras CUPS') +
+          '</span></li>';
+        toast(e.message, false);
+      }
     }
 
     document.getElementById('btnRefresh').addEventListener('click', async () => {

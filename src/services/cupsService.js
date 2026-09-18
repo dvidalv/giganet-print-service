@@ -1,9 +1,6 @@
 'use strict';
 
-const { execFile } = require('child_process');
-const { promisify } = require('util');
-
-const execFileAsync = promisify(execFile);
+const { spawn } = require('child_process');
 
 const LPSTAT_BIN = '/usr/bin/lpstat';
 const LP_BIN = '/usr/bin/lp';
@@ -23,26 +20,80 @@ function resolveBin(cmd) {
   return cmd;
 }
 
-async function run(cmd, args, options = {}) {
+function wrapLpError(err, stdout, stderr) {
+  const e = new Error(
+    String(stderr || err.message || stdout || 'Error ejecutando comando').trim()
+  );
+  e.code = 'LP_ERROR';
+  e.stderr = stderr;
+  e.stdout = stdout;
+  return e;
+}
+
+function isBadFd(err) {
+  const msg = `${err.message || ''} ${err.stderr || ''}`.toLowerCase();
+  return msg.includes('bad file descriptor') || err.code === 'EBADF';
+}
+
+function runOnce(cmd, args, options = {}) {
   const { timeout = 15000 } = options;
-  try {
-    const { stdout, stderr } = await execFileAsync(resolveBin(cmd), args, {
-      timeout,
-      maxBuffer: 2 * 1024 * 1024,
+  const bin = resolveBin(cmd);
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args, {
       env: cupsEnv(),
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
-    return { stdout: stdout || '', stderr: stderr || '' };
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+    }, timeout);
+
+    const finish = (fn) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', (err) => {
+      finish(() => reject(wrapLpError(err, stdout, stderr)));
+    });
+    child.on('close', (code, signal) => {
+      finish(() => {
+        if (signal === 'SIGTERM') {
+          const e = new Error('Timeout ejecutando comando de impresión');
+          e.code = 'PRINT_TIMEOUT';
+          reject(e);
+          return;
+        }
+        if (code !== 0) {
+          reject(wrapLpError(new Error(stderr || stdout || `Código ${code}`), stdout, stderr));
+          return;
+        }
+        resolve({ stdout, stderr });
+      });
+    });
+  });
+}
+
+async function run(cmd, args, options = {}) {
+  try {
+    return await runOnce(cmd, args, options);
   } catch (err) {
-    if (err.killed && err.signal === 'SIGTERM') {
-      const e = new Error('Timeout ejecutando comando de impresión');
-      e.code = 'PRINT_TIMEOUT';
-      throw e;
+    if ((cmd === 'lpstat' || cmd === 'lp') && isBadFd(err) && args[0] !== '-h') {
+      return runOnce(cmd, ['-h', 'localhost', ...args], options);
     }
-    const e = new Error(err.stderr || err.message || 'Error ejecutando comando');
-    e.code = err.code === 'ETIMEDOUT' ? 'PRINT_TIMEOUT' : 'LP_ERROR';
-    e.stderr = err.stderr;
-    e.stdout = err.stdout;
-    throw e;
+    throw err;
   }
 }
 
