@@ -563,7 +563,8 @@
       list.innerHTML = '';
 
       if (!state.printers.length) {
-        list.innerHTML = '<li><span class="meta">No hay impresoras CUPS instaladas</span></li>';
+        list.innerHTML =
+          '<li><span class="meta">No hay impresoras CUPS. En esta Mac: Ajustes → Impresoras y escáneres, luego en Terminal <code>lpstat -p</code>.</span></li>';
         renderPrinterPicker(picker, select, '', false);
         renderRoleFields(state.printerRoles);
         return;
