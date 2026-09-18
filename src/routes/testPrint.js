@@ -3,10 +3,12 @@
 const express = require('express');
 const printerService = require('../services/printerService');
 const logger = require('../utils/logger');
+const { rejectIfPaused } = require('./runState');
 
 const router = express.Router();
 
 router.post('/', async (req, res) => {
+  if (rejectIfPaused(res)) return;
   const body = req.body || {};
   try {
     const result = await printerService.testPrint({

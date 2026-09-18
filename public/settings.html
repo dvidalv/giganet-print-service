@@ -353,9 +353,10 @@
         <div class="row">
           <button type="button" class="secondary" id="btnRefresh">Actualizar</button>
           <button type="button" id="btnTestPrint">Probar impresión</button>
+          <button type="button" id="btnStartService">Iniciar servicio</button>
           <button type="button" class="danger" id="btnStopService">Detener servicio</button>
         </div>
-        <p class="hint">Cerrar esta ventana (PWA) no apaga el servicio. «Detener servicio» sí: quita el autoarranque y cierra el proceso. Para volver: <code>npm run install-service</code>.</p>
+        <p class="hint">Cerrar esta ventana no detiene nada. <strong>Detener</strong> pausa la impresión (LPCR no imprime). <strong>Iniciar</strong> la reanuda. El proceso sigue en 127.0.0.1:9100.</p>
       </section>
 
       <section>
@@ -469,9 +470,27 @@
       return data;
     }
 
-    function setStatus(online, detail) {
-      document.getElementById('statusDot').className = 'dot ' + (online ? 'ok' : 'err');
-      document.getElementById('statusText').textContent = online ? 'En línea' : 'Desconectado';
+    function setStatus(kind, detail) {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      const start = document.getElementById('btnStartService');
+      const stop = document.getElementById('btnStopService');
+      if (kind === 'ok') {
+        dot.className = 'dot ok';
+        text.textContent = 'En línea';
+        start.disabled = true;
+        stop.disabled = false;
+      } else if (kind === 'paused') {
+        dot.className = 'dot';
+        text.textContent = 'Pausado';
+        start.disabled = false;
+        stop.disabled = true;
+      } else {
+        dot.className = 'dot err';
+        text.textContent = 'Desconectado';
+        start.disabled = false;
+        stop.disabled = true;
+      }
       document.getElementById('statusDetail').textContent = detail || '';
     }
 
@@ -640,7 +659,11 @@
       document.getElementById('origins').value = (boot.allowedOrigins || []).join('\n');
 
       const status = await api('/status');
-      setStatus(status.status === 'online', 'Servicio operativo');
+      if (status.paused || status.status === 'paused') {
+        setStatus('paused', 'Impresión detenida. Pulsa Iniciar servicio.');
+      } else {
+        setStatus('ok', 'Servicio operativo');
+      }
 
       try {
         const { printers } = await api('/printers');
@@ -661,7 +684,7 @@
         await loadAll();
         toast('Datos actualizados');
       } catch (e) {
-        setStatus(false, e.message);
+        setStatus('err', e.message);
         toast(e.message, false);
       }
     });
@@ -754,52 +777,40 @@
       }
     });
 
-    document.getElementById('btnStopService').addEventListener('click', async () => {
-      if (
-        !confirm(
-          '¿Detener Giganet Print Service en esta Mac?\n\nDejará de imprimir desde LPCR hasta que ejecutes npm run install-service. La API Key y las impresoras no se borran.'
-        )
-      ) {
-        return;
-      }
-      const btn = document.getElementById('btnStopService');
-      const running = state.version || 'desconocida';
-      if (!versionAtLeast(running, '1.2.4')) {
-        toast(
-          'El encabezado dice v' +
-            running +
-            '. Hay otro proceso viejo en el puerto 9100. En Terminal:\nlsof -ti tcp:9100 | xargs kill\ncd ~/Applications/giganet-print-service && git pull && npm run install-service',
-          false
-        );
-        return;
-      }
+    document.getElementById('btnStartService').addEventListener('click', async () => {
+      const btn = document.getElementById('btnStartService');
       btn.disabled = true;
-      const typedKey = (document.getElementById('apiKey').value || '').trim();
-      if (typedKey.length >= 16) state.apiKey = typedKey;
       try {
-        try {
-          await api('/settings/shutdown', { method: 'POST', body: JSON.stringify({}) });
-        } catch (e) {
-          if (e.status === 404 || e.code === 'NOT_FOUND') {
-            await api('/shutdown', { method: 'POST', body: JSON.stringify({}) });
-          } else {
-            throw e;
-          }
-        }
-        setStatus(false, 'Servicio detenido');
-        toast('Servicio detenido. Para volver: npm run install-service');
+        await api('/settings/start', { method: 'POST', body: JSON.stringify({}) });
+        setStatus('ok', 'Servicio operativo');
+        toast('Servicio iniciado. LPCR ya puede imprimir.');
       } catch (e) {
-        if (!e.status) {
-          setStatus(false, 'Servicio detenido');
-          toast('Servicio detenido. Para volver: npm run install-service');
-          return;
-        }
         btn.disabled = false;
-        if (e.status === 401 || e.code === 'UNAUTHORIZED') {
-          toast('API Key incorrecta. Pulsa Actualizar o pega la de Vercel y Guardar clave.', false);
+        if (!e.status) {
+          toast(
+            'El proceso no está en marcha. En Terminal: cd ~/Applications/giganet-print-service && npm start',
+            false
+          );
+          setStatus('err', 'Proceso apagado');
           return;
         }
         toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnStopService').addEventListener('click', async () => {
+      if (!confirm('¿Pausar la impresión en esta Mac? LPCR no imprimirá hasta que pulses Iniciar servicio.')) {
+        return;
+      }
+      const btn = document.getElementById('btnStopService');
+      btn.disabled = true;
+      try {
+        await api('/settings/stop', { method: 'POST', body: JSON.stringify({}) });
+        setStatus('paused', 'Impresión detenida. Pulsa Iniciar servicio.');
+        toast('Impresión pausada. Pulsa Iniciar servicio para reanudar.');
+      } catch (e) {
+        btn.disabled = false;
+        toast(e.message || 'No se pudo pausar', false);
       }
     });
 
@@ -838,7 +849,7 @@
     });
 
     loadAll().catch((e) => {
-      setStatus(false, e.message);
+      setStatus('err', e.message);
       toast(e.message, false);
     });
 

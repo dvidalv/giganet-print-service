@@ -3,6 +3,7 @@
 const express = require('express');
 const printerService = require('../services/printerService');
 const logger = require('../utils/logger');
+const { rejectIfPaused } = require('./runState');
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ function sendError(res, err) {
 }
 
 router.post('/', async (req, res) => {
+  if (rejectIfPaused(res)) return;
   const body = req.body || {};
   const printerHint = body.printer || null;
 

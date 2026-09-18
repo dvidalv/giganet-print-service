@@ -6,7 +6,7 @@ const os = require('os');
 const crypto = require('crypto');
 
 const SERVICE_NAME = 'Giganet Print Service';
-const SERVICE_VERSION = '1.2.4';
+const SERVICE_VERSION = '1.2.5';
 
 /** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
 const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];
@@ -129,6 +129,7 @@ function writeConfig(config) {
       ? config.allowedOrigins
       : [],
     printTimeoutMs: Number(config.printTimeoutMs) || 30000,
+    paused: config.paused === true,
     printerRoles: normalizePrinterRoles(
       config.printerRoles,
       defaults.printerRoles
@@ -187,6 +188,9 @@ function updateConfig(partial) {
     }
     next.printTimeoutMs = ms;
   }
+  if (partial.paused !== undefined) {
+    next.paused = Boolean(partial.paused);
+  }
   if (partial.printerRoles !== undefined) {
     if (!partial.printerRoles || typeof partial.printerRoles !== 'object') {
       const err = new Error('printerRoles debe ser un objeto');
@@ -210,6 +214,7 @@ function getPublicConfig() {
     host: config.host,
     allowedOrigins: config.allowedOrigins,
     printTimeoutMs: config.printTimeoutMs,
+    paused: config.paused === true,
     printerRoles: config.printerRoles,
     hasApiKey: Boolean(config.apiKey),
   };

@@ -19,7 +19,7 @@ const printersRoutes = require('./routes/printers');
 const printRoutes = require('./routes/print');
 const configRoutes = require('./routes/config');
 const testPrintRoutes = require('./routes/testPrint');
-const { handleShutdown } = require('./routes/shutdown');
+const { handleStop, handleStart } = require('./routes/runState');
 
 function createApp() {
   const app = express();
@@ -89,8 +89,10 @@ function createApp() {
     });
   });
 
-  app.post('/settings/shutdown', handleShutdown);
-  app.post('/shutdown', handleShutdown);
+  app.post('/settings/start', handleStart);
+  app.post('/settings/stop', handleStop);
+  app.post('/settings/shutdown', handleStop);
+  app.post('/shutdown', handleStop);
 
   // Protected API
   app.use(apiKeyMiddleware);

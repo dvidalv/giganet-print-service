@@ -204,7 +204,7 @@ Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela o
 | Arranque manual (sin LaunchAgent) | `npm start` |
 | Instalar / reiniciar autoarranque | `npm run install-service` |
 | Instalar con la key de Vercel | `GIGANET_PRINT_KEY='…' npm run install-service` |
-| Detener desde la UI | `/settings` → **Detener servicio** (no basta con cerrar la PWA) |
+| Iniciar / pausar impresión | `/settings` → **Iniciar servicio** / **Detener servicio** (el proceso sigue vivo) |
 | Quitar autoarranque | `npm run uninstall-service` |
 | Health check | `curl http://127.0.0.1:9100/status` |
 | Listar colas CUPS | `lpstat -p` |

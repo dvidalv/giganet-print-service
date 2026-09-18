@@ -13,6 +13,7 @@
     "http://127.0.0.1:3000"
   ],
   "printTimeoutMs": 30000,
+  "paused": false,
   "printerRoles": {
     "label": "",
     "ticket": "",

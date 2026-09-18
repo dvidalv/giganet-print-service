@@ -17,6 +17,7 @@ function publicShape(updated, includeApiKey) {
     host: updated.host,
     allowedOrigins: updated.allowedOrigins,
     printTimeoutMs: updated.printTimeoutMs,
+    paused: Boolean(updated.paused),
     printerRoles: updated.printerRoles,
   };
   if (includeApiKey) {
@@ -54,8 +55,16 @@ router.post('/', (req, res) => {
   try {
     const body = req.body || {};
     if (body.stopService === true) {
-      const { handleShutdown } = require('./shutdown');
-      return handleShutdown(req, res);
+      const { handleStop } = require('./runState');
+      return handleStop(req, res);
+    }
+    if (body.startService === true || body.paused === false) {
+      const { handleStart } = require('./runState');
+      return handleStart(req, res);
+    }
+    if (body.paused === true) {
+      const { handleStop } = require('./runState');
+      return handleStop(req, res);
     }
     const allowed = {};
     if (body.defaultPrinter !== undefined) allowed.defaultPrinter = body.defaultPrinter;
