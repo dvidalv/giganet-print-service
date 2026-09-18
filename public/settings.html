@@ -159,8 +159,49 @@
       outline: none;
     }
 
+    select option {
+      background: #e8eef5;
+      color: #0f1419;
+    }
+
     select:focus, input:focus, textarea:focus {
       border-color: var(--accent);
+    }
+
+    .printer-picker {
+      display: grid;
+      gap: 6px;
+    }
+
+    .printer-choice {
+      width: 100%;
+      text-align: left;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .printer-choice:hover {
+      background: #2c3b4f;
+    }
+
+    .printer-choice.selected {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 18%, var(--surface-2));
+      color: var(--text);
+    }
+
+    .printer-choice .choice-meta {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--muted);
     }
 
     textarea {
@@ -315,7 +356,8 @@
         <h2>Impresora predeterminada</h2>
         <div class="field">
           <label for="defaultPrinter">Seleccionar impresora</label>
-          <select id="defaultPrinter"></select>
+          <div id="defaultPrinterPicker" class="printer-picker"></div>
+          <select id="defaultPrinter" hidden></select>
         </div>
         <div class="row">
           <button type="button" id="btnSavePrinter">Guardar impresora</button>
@@ -426,7 +468,7 @@
       select.innerHTML = '';
       const empty = document.createElement('option');
       empty.value = '';
-      empty.textContent = includeDefaultOption ? '— Usar predeterminada —' : '— Seleccionar —';
+      empty.textContent = includeDefaultOption ? 'Usar predeterminada' : 'Seleccionar…';
       select.appendChild(empty);
 
       for (const p of state.printers) {
@@ -435,8 +477,54 @@
         opt.textContent = p.name;
         select.appendChild(opt);
       }
-      if (selected) select.value = selected;
-      else select.value = '';
+      if (selected && Array.from(select.options).some((o) => o.value === selected)) {
+        select.value = selected;
+      } else {
+        select.value = '';
+      }
+    }
+
+    function renderPrinterPicker(host, select, selected, includeDefaultOption) {
+      fillPrinterSelect(select, selected, includeDefaultOption);
+      host.innerHTML = '';
+
+      const choices = [];
+      choices.push({
+        value: '',
+        label: includeDefaultOption
+          ? 'Usar predeterminada'
+          : (state.printers.length ? 'Seleccionar…' : 'Sin impresoras'),
+        meta: includeDefaultOption
+          ? 'Usa la impresora predeterminada de arriba'
+          : '',
+      });
+      for (const p of state.printers) {
+        const bits = [];
+        if (p.default) bits.push('default del sistema');
+        if (p.status) bits.push(p.status);
+        if (p.enabled === false) bits.push('disabled');
+        choices.push({
+          value: p.name,
+          label: p.name,
+          meta: bits.join(' · '),
+        });
+      }
+
+      const current = select.value || '';
+      for (const c of choices) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'printer-choice' + (c.value === current ? ' selected' : '');
+        btn.innerHTML =
+          '<span>' + escapeHtml(c.label) + '</span>' +
+          (c.meta ? '<span class="choice-meta">' + escapeHtml(c.meta) + '</span>' : '');
+        btn.addEventListener('click', () => {
+          select.value = c.value;
+          host.querySelectorAll('.printer-choice').forEach((el) => el.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+        host.appendChild(btn);
+      }
     }
 
     function renderRoleFields(roles) {
@@ -452,8 +540,17 @@
         const select = document.createElement('select');
         select.id = id;
         select.dataset.role = def.key;
-        fillPrinterSelect(select, state.printerRoles[def.key] || '', true);
+        select.hidden = true;
+        const picker = document.createElement('div');
+        picker.className = 'printer-picker';
         field.appendChild(select);
+        field.appendChild(picker);
+        renderPrinterPicker(
+          picker,
+          select,
+          state.printerRoles[def.key] || '',
+          true
+        );
         wrap.appendChild(field);
       }
     }
@@ -461,17 +558,18 @@
     function renderPrinters(printers, selected) {
       const list = document.getElementById('printerList');
       const select = document.getElementById('defaultPrinter');
+      const picker = document.getElementById('defaultPrinterPicker');
       state.printers = printers || [];
       list.innerHTML = '';
 
       if (!state.printers.length) {
         list.innerHTML = '<li><span class="meta">No hay impresoras CUPS instaladas</span></li>';
-        select.innerHTML = '<option value="">— Sin impresoras —</option>';
+        renderPrinterPicker(picker, select, '', false);
         renderRoleFields(state.printerRoles);
         return;
       }
 
-      fillPrinterSelect(select, selected || '', false);
+      renderPrinterPicker(picker, select, selected || '', false);
 
       for (const p of state.printers) {
         const li = document.createElement('li');
