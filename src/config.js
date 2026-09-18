@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const logger = require('./utils/logger');
 
 const SERVICE_NAME = 'Giganet Print Service';
 const SERVICE_VERSION = '1.2.5';
@@ -117,8 +118,15 @@ function loadConfig({ createIfMissing = true } = {}) {
   return { ...merged };
 }
 
-function writeConfig(config) {
+function persistConfigFile(toSave) {
   ensureSupportDir();
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2) + '\n', {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+}
+
+function writeConfig(config, { optionalPersist = false } = {}) {
   const defaults = readDefaultConfig();
   const toSave = {
     defaultPrinter: config.defaultPrinter || '',
@@ -135,11 +143,18 @@ function writeConfig(config) {
       defaults.printerRoles
     ),
   };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(toSave, null, 2) + '\n', {
-    encoding: 'utf8',
-    mode: 0o600,
-  });
   cachedConfig = toSave;
+  try {
+    persistConfigFile(toSave);
+  } catch (err) {
+    if (optionalPersist) {
+      logger.warn('No se pudo guardar config.json; el estado queda en memoria', {
+        message: err.message,
+      });
+      return { ...toSave };
+    }
+    throw err;
+  }
   return { ...toSave };
 }
 
@@ -203,7 +218,10 @@ function updateConfig(partial) {
     );
   }
 
-  return writeConfig(next);
+  const onlyPaused =
+    Object.prototype.hasOwnProperty.call(partial, 'paused') &&
+    Object.keys(partial).every((key) => key === 'paused');
+  return writeConfig(next, { optionalPersist: onlyPaused });
 }
 
 function getPublicConfig() {

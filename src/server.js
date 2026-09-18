@@ -133,7 +133,9 @@ function createApp() {
     res.status(500).json({
       success: false,
       error: 'INTERNAL_ERROR',
-      message: 'Error interno del servidor',
+      message: err.code === 'EPERM' || err.code === 'EACCES'
+        ? 'No se pudo escribir la configuración. Reinicia el servicio desde Terminal: npm start'
+        : 'Error interno del servidor',
     });
   });
 
