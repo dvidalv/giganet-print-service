@@ -88,6 +88,43 @@ function launchctl(...args) {
   }
 }
 
+function freeListenPort(port) {
+  let pids = [];
+  try {
+    const out = execFileSync('lsof', ['-ti', `tcp:${port}`], { encoding: 'utf8' });
+    pids = out
+      .split(/\s+/)
+      .map((s) => Number(s))
+      .filter((n) => n && n !== process.pid);
+  } catch {
+    return;
+  }
+  if (!pids.length) return;
+  console.log(`Puerto ${port} ocupado por PID ${pids.join(', ')}; se detiene para reinstalar.`);
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      /* ya no existe */
+    }
+  }
+  const until = Date.now() + 1500;
+  while (Date.now() < until) {
+    try {
+      execFileSync('lsof', ['-ti', `tcp:${port}`], { encoding: 'utf8', stdio: 'pipe' });
+    } catch {
+      return;
+    }
+  }
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function uidDomain() {
   return `gui/${process.getuid()}`;
 }
@@ -124,6 +161,8 @@ function main() {
     // ignore
   }
 
+  freeListenPort(config.port || 9100);
+
   fs.writeFileSync(PLIST_PATH, buildPlist(), { encoding: 'utf8', mode: 0o644 });
   console.log(`LaunchAgent: ${PLIST_PATH}`);
 
@@ -140,6 +179,16 @@ function main() {
   console.log('\nListo.');
   console.log(`  Status:   http://127.0.0.1:${config.port}/status`);
   console.log(`  Settings: http://127.0.0.1:${config.port}/settings`);
+  try {
+    const status = execFileSync(
+      'curl',
+      ['-sS', '--max-time', '2', `http://127.0.0.1:${config.port}/status`],
+      { encoding: 'utf8' }
+    );
+    console.log(`  Verificación: ${status.trim()}`);
+  } catch {
+    console.warn('  No se pudo leer /status todavía; espera un segundo y recarga /settings.');
+  }
   console.log('\nEl servicio arrancará automáticamente al iniciar sesión.');
 }
 

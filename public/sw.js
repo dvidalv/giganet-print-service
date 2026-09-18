@@ -1,7 +1,7 @@
 /* Giganet Print Service — PWA service worker */
 'use strict';
 
-const CACHE_NAME = 'giganet-print-pwa-v9';
+const CACHE_NAME = 'giganet-print-pwa-v10';
 const PRECACHE_URLS = [
   '/settings',
   '/manifest.webmanifest',

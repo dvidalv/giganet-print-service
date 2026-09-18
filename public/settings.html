@@ -440,7 +440,7 @@
       { key: 'estudio', label: 'Informe de estudio 8.5×11 (HP)' },
     ];
 
-    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {} };
+    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {}, version: '' };
 
     function toast(message, ok = true) {
       const el = document.getElementById('toast');
@@ -606,6 +606,16 @@
         .replace(/"/g, '&quot;');
     }
 
+    function versionAtLeast(current, min) {
+      const a = String(current || '0').split('.').map((n) => parseInt(n, 10) || 0);
+      const b = String(min).split('.').map((n) => parseInt(n, 10) || 0);
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        if ((a[i] || 0) > (b[i] || 0)) return true;
+        if ((a[i] || 0) < (b[i] || 0)) return false;
+      }
+      return true;
+    }
+
     function collectPrinterRoles() {
       const roles = {};
       for (const def of ROLE_DEFS) {
@@ -620,6 +630,7 @@
       state.apiKey = boot.apiKey || '';
       state.port = boot.port || 9100;
       state.printerRoles = boot.printerRoles || {};
+      state.version = boot.version || '';
 
       document.getElementById('versionLabel').textContent =
         (boot.service || 'Giganet Print Service') + ' · v' + (boot.version || '1.0.0') +
@@ -752,11 +763,19 @@
         return;
       }
       const btn = document.getElementById('btnStopService');
+      const running = state.version || 'desconocida';
+      if (!versionAtLeast(running, '1.2.4')) {
+        toast(
+          'El encabezado dice v' +
+            running +
+            '. Hay otro proceso viejo en el puerto 9100. En Terminal:\nlsof -ti tcp:9100 | xargs kill\ncd ~/Applications/giganet-print-service && git pull && npm run install-service',
+          false
+        );
+        return;
+      }
       btn.disabled = true;
       const typedKey = (document.getElementById('apiKey').value || '').trim();
       if (typedKey.length >= 16) state.apiKey = typedKey;
-      const stale =
-        'El proceso que está corriendo es anterior a v1.2.4. En Terminal: git pull && npm run install-service. Recarga y mira que el encabezado diga v1.2.4.';
       try {
         try {
           await api('/settings/shutdown', { method: 'POST', body: JSON.stringify({}) });
@@ -776,12 +795,11 @@
           return;
         }
         btn.disabled = false;
-        toast(
-          e.status === 404 || e.status === 401 || e.code === 'NOT_FOUND' || e.code === 'UNAUTHORIZED'
-            ? stale
-            : e.message,
-          false
-        );
+        if (e.status === 401 || e.code === 'UNAUTHORIZED') {
+          toast('API Key incorrecta. Pulsa Actualizar o pega la de Vercel y Guardar clave.', false);
+          return;
+        }
+        toast(e.message, false);
       }
     });
 

@@ -226,6 +226,19 @@ Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela o
 
 ## Problemas frecuentes
 
+### Detener servicio dice que el proceso es anterior a v1.2.4
+
+Hay un `npm start` viejo ocupando el puerto 9100. El HTML se actualizó, el Node no.
+
+```bash
+lsof -ti tcp:9100 | xargs kill
+cd ~/Applications/giganet-print-service
+git pull
+npm run install-service
+```
+
+Recarga `/settings`. El encabezado debe coincidir con la versión del `git pull`. `install-service` ahora libera el puerto 9100 solo.
+
 ### Chrome bloqueó 127.0.0.1
 
 Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). CORS de `/settings` debe incluir ese origen.
