@@ -66,6 +66,30 @@ function normalizePrinterRoles(rawRoles, defaults) {
   return out;
 }
 
+function normalizePrinterOptions(rawOptions) {
+  if (!rawOptions || typeof rawOptions !== 'object') {
+    return {};
+  }
+  const normalized = {};
+  for (const [printerName, options] of Object.entries(rawOptions)) {
+    if (!options || typeof options !== 'object') continue;
+    const opts = {};
+    if (options.media) {
+      opts.media = String(options.media).trim();
+    }
+    if (options.orientation) {
+      const orient = String(options.orientation).trim();
+      if (['portrait', 'landscape', '3', '4'].includes(orient)) {
+        opts.orientation = orient === 'portrait' ? '4' : orient === 'landscape' ? '3' : orient;
+      }
+    }
+    if (Object.keys(opts).length > 0) {
+      normalized[printerName] = opts;
+    }
+  }
+  return normalized;
+}
+
 function loadConfig({ createIfMissing = true } = {}) {
   ensureSupportDir();
 
@@ -80,6 +104,7 @@ function loadConfig({ createIfMissing = true } = {}) {
         defaults.printerRoles,
         defaults.printerRoles
       ),
+      printerOptions: normalizePrinterOptions(defaults.printerOptions),
       apiKey: defaults.apiKey || generateApiKey(),
     };
     writeConfig(initial);
@@ -100,6 +125,7 @@ function loadConfig({ createIfMissing = true } = {}) {
       parsed.printerRoles,
       defaults.printerRoles
     ),
+    printerOptions: normalizePrinterOptions(parsed.printerOptions || {}),
   };
 
   if (!merged.apiKey) {
@@ -142,6 +168,7 @@ function writeConfig(config, { optionalPersist = false } = {}) {
       config.printerRoles,
       defaults.printerRoles
     ),
+    printerOptions: normalizePrinterOptions(config.printerOptions || {}),
   };
   cachedConfig = toSave;
   try {
@@ -162,12 +189,20 @@ function getConfig() {
   if (!cachedConfig) {
     return loadConfig();
   }
-  return { ...cachedConfig, printerRoles: { ...cachedConfig.printerRoles } };
+  return { 
+    ...cachedConfig, 
+    printerRoles: { ...cachedConfig.printerRoles },
+    printerOptions: { ...cachedConfig.printerOptions }
+  };
 }
 
 function updateConfig(partial) {
   const current = getConfig();
-  const next = { ...current, printerRoles: { ...current.printerRoles } };
+  const next = { 
+    ...current, 
+    printerRoles: { ...current.printerRoles },
+    printerOptions: { ...current.printerOptions }
+  };
 
   if (partial.defaultPrinter !== undefined) {
     next.defaultPrinter = String(partial.defaultPrinter || '');
@@ -217,6 +252,17 @@ function updateConfig(partial) {
       current.printerRoles
     );
   }
+  if (partial.printerOptions !== undefined) {
+    if (!partial.printerOptions || typeof partial.printerOptions !== 'object') {
+      const err = new Error('printerOptions debe ser un objeto');
+      err.code = 'INVALID_PRINTER_OPTIONS';
+      throw err;
+    }
+    next.printerOptions = normalizePrinterOptions({
+      ...current.printerOptions,
+      ...partial.printerOptions
+    });
+  }
 
   const onlyPaused =
     Object.prototype.hasOwnProperty.call(partial, 'paused') &&
@@ -234,6 +280,7 @@ function getPublicConfig() {
     printTimeoutMs: config.printTimeoutMs,
     paused: config.paused === true,
     printerRoles: config.printerRoles,
+    printerOptions: config.printerOptions,
     hasApiKey: Boolean(config.apiKey),
   };
 }
@@ -265,12 +312,34 @@ function resolvePrinterNameFromConfig({ printer, role } = {}) {
   return String(config.defaultPrinter || '').trim();
 }
 
+/**
+ * Construye lpOptions desde printerOptions de configuración
+ * @param {string} printerName
+ * @returns {string[]}
+ */
+function lpOptionsForPrinter(printerName) {
+  const config = getConfig();
+  const options = config.printerOptions?.[printerName];
+  if (!options || typeof options !== 'object') {
+    return [];
+  }
+  const lpOpts = [];
+  if (options.media) {
+    lpOpts.push(`media=${options.media}`);
+  }
+  if (options.orientation) {
+    lpOpts.push(`orientation-requested=${options.orientation}`);
+  }
+  return lpOpts;
+}
+
 module.exports = {
   SERVICE_NAME,
   SERVICE_VERSION,
   PRINT_ROLE_KEYS,
   ROLE_LP_OPTIONS,
   lpOptionsForRole,
+  lpOptionsForPrinter,
   SUPPORT_DIR,
   CONFIG_PATH,
   ensureSupportDir,
@@ -282,5 +351,6 @@ module.exports = {
   getPublicConfig,
   getSettingsPageConfig,
   normalizePrinterRoles,
+  normalizePrinterOptions,
   resolvePrinterNameFromConfig,
 };

@@ -5,6 +5,7 @@ const {
   resolvePrinterNameFromConfig,
   PRINT_ROLE_KEYS,
   lpOptionsForRole,
+  lpOptionsForPrinter,
 } = require('../config');
 const cupsService = require('./cupsService');
 const pdfPrinter = require('../printers/pdfPrinter');
@@ -94,6 +95,10 @@ async function printDocument(payload) {
     throw createError('INVALID_BASE64', 'Falta el campo data (Base64)');
   }
 
+  const roleLpOptions = lpOptionsForRole(role);
+  const printerLpOptions = lpOptionsForPrinter(printer);
+  const combinedLpOptions = [...roleLpOptions, ...printerLpOptions];
+
   switch (type) {
     case 'pdf':
       return pdfPrinter.printPdf({
@@ -101,7 +106,7 @@ async function printDocument(payload) {
         data: payload.data,
         copies,
         timeoutMs,
-        lpOptions: lpOptionsForRole(role),
+        lpOptions: combinedLpOptions,
       });
     case 'raw':
       return rawPrinter.printRaw({
