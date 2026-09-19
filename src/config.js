@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const logger = require('./utils/logger');
 
 const SERVICE_NAME = 'Giganet Print Service';
-const SERVICE_VERSION = '1.2.6';
+const SERVICE_VERSION = '1.2.7';
 
 /** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
 const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];
@@ -258,10 +258,7 @@ function updateConfig(partial) {
       err.code = 'INVALID_PRINTER_OPTIONS';
       throw err;
     }
-    next.printerOptions = normalizePrinterOptions({
-      ...current.printerOptions,
-      ...partial.printerOptions
-    });
+    next.printerOptions = normalizePrinterOptions(partial.printerOptions);
   }
 
   const onlyPaused =

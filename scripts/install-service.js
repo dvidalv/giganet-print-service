@@ -265,11 +265,11 @@ function main() {
       verified = execFileSync(
         'curl',
         ['-sS', '--max-time', '1', `http://127.0.0.1:${port}/status`],
-        { encoding: 'utf8' }
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
       ).trim();
       if (verified) break;
     } catch {
-      execFileSync('sleep', ['0.2']);
+      execFileSync('sleep', ['0.2'], { stdio: 'ignore' });
     }
   }
   if (verified) {

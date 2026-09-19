@@ -327,6 +327,26 @@
         grid-template-columns: 1fr 1fr;
       }
     }
+
+    .paper-card {
+      padding: 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .paper-card h3 {
+      margin: 0 0 12px;
+      font-size: 0.92rem;
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+    .paper-fields {
+      display: grid;
+      gap: 12px;
+    }
+    @media (min-width: 720px) {
+      .paper-fields { grid-template-columns: 1fr 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -396,6 +416,18 @@
       </section>
 
       <section>
+        <h2>Tamaño de papel y orientación</h2>
+        <p class="hint" style="margin-top:0;margin-bottom:14px">
+          Por cola CUPS. Vacío = usa el tamaño del tipo de documento (etiqueta 2×1, ticket, carta).
+          Si eliges un tamaño aquí, aplica a todo lo que salga por esa impresora.
+        </p>
+        <div id="paperFields" class="role-fields"></div>
+        <div class="row">
+          <button type="button" id="btnSavePaper">Guardar papel y orientación</button>
+        </div>
+      </section>
+
+      <section>
         <h2>Impresoras disponibles</h2>
         <ul class="printers" id="printerList">
           <li><span class="meta">Cargando…</span></li>
@@ -441,7 +473,21 @@
       { key: 'estudio', label: 'Informe de estudio 8.5×11 (HP)' },
     ];
 
-    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {}, version: '' };
+    const MEDIA_PRESETS = [
+      { value: '', label: 'Según el tipo de documento' },
+      { value: 'Letter', label: 'Carta 8.5×11 (Letter)' },
+      { value: 'Legal', label: 'Legal 8.5×14' },
+      { value: 'A4', label: 'A4' },
+      { value: 'A5', label: 'A5' },
+      { value: 'Custom.2x1in', label: 'Etiqueta 2×1 pulgadas' },
+      { value: 'Custom.4x6in', label: 'Etiqueta 4×6 pulgadas' },
+      { value: 'Custom.80x200mm', label: 'Ticket 80 mm' },
+      { value: 'Custom.58x200mm', label: 'Ticket 58 mm' },
+      { value: 'Custom.3x5in', label: '3×5 pulgadas' },
+      { value: '__custom__', label: 'Otro (valor CUPS)' },
+    ];
+
+    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {}, printerOptions: {}, version: '' };
 
     function toast(message, ok = true) {
       const el = document.getElementById('toast');
@@ -597,6 +643,7 @@
           '<li><span class="meta">No hay impresoras CUPS. En esta Mac: Ajustes → Impresoras y escáneres, luego en Terminal <code>lpstat -p</code>.</span></li>';
         renderPrinterPicker(picker, select, '', false);
         renderRoleFields(state.printerRoles);
+        renderPaperFields();
         return;
       }
 
@@ -615,6 +662,7 @@
       }
 
       renderRoleFields(state.printerRoles);
+      renderPaperFields();
     }
 
     function escapeHtml(s) {
@@ -635,6 +683,95 @@
       return true;
     }
 
+    function paperId(name, suffix) {
+      return 'paper_' + suffix + '_' + String(name).replace(/[^A-Za-z0-9]+/g, '_');
+    }
+
+    function isPresetMedia(value) {
+      return MEDIA_PRESETS.some((p) => p.value === value && p.value !== '__custom__');
+    }
+
+    function renderPaperFields() {
+      const wrap = document.getElementById('paperFields');
+      wrap.innerHTML = '';
+      if (!state.printers.length) {
+        wrap.innerHTML = '<p class="hint">No hay impresoras CUPS para configurar.</p>';
+        return;
+      }
+
+      for (const p of state.printers) {
+        const saved = state.printerOptions[p.name] || {};
+        const savedMedia = saved.media || '';
+        const useCustom = savedMedia && !isPresetMedia(savedMedia);
+        const savedOrient = saved.orientation === '3' || saved.orientation === 'landscape'
+          ? 'landscape'
+          : saved.orientation === '4' || saved.orientation === 'portrait'
+            ? 'portrait'
+            : '';
+
+        const card = document.createElement('div');
+        card.className = 'paper-card';
+        card.dataset.printer = p.name;
+        const mediaId = paperId(p.name, 'media');
+        const customId = paperId(p.name, 'custom');
+        const orientId = paperId(p.name, 'orient');
+
+        let mediaOpts = '';
+        for (const preset of MEDIA_PRESETS) {
+          const selected =
+            preset.value === '__custom__'
+              ? useCustom
+              : preset.value === savedMedia && !useCustom;
+          mediaOpts +=
+            '<option value="' + escapeHtml(preset.value) + '"' +
+            (selected ? ' selected' : '') + '>' +
+            escapeHtml(preset.label) + '</option>';
+        }
+
+        card.innerHTML =
+          '<h3>' + escapeHtml(p.name) + '</h3>' +
+          '<div class="paper-fields">' +
+            '<div class="field">' +
+              '<label for="' + mediaId + '">Tamaño de papel</label>' +
+              '<select id="' + mediaId + '">' + mediaOpts + '</select>' +
+              '<input id="' + customId + '" type="text" spellcheck="false" placeholder="Ej. Custom.100x50mm" ' +
+                (useCustom ? 'value="' + escapeHtml(savedMedia) + '"' : 'hidden') + ' />' +
+            '</div>' +
+            '<div class="field">' +
+              '<label for="' + orientId + '">Orientación</label>' +
+              '<select id="' + orientId + '">' +
+                '<option value="">Predeterminada</option>' +
+                '<option value="portrait"' + (savedOrient === 'portrait' ? ' selected' : '') + '>Vertical (retrato)</option>' +
+                '<option value="landscape"' + (savedOrient === 'landscape' ? ' selected' : '') + '>Horizontal (paisaje)</option>' +
+              '</select>' +
+            '</div>' +
+          '</div>';
+        wrap.appendChild(card);
+
+        const mediaSelect = document.getElementById(mediaId);
+        const customInput = document.getElementById(customId);
+        mediaSelect.addEventListener('change', () => {
+          customInput.hidden = mediaSelect.value !== '__custom__';
+          if (mediaSelect.value === '__custom__') customInput.focus();
+        });
+      }
+    }
+
+    function collectPrinterOptions() {
+      const out = {};
+      for (const p of state.printers) {
+        const mediaSelect = document.getElementById(paperId(p.name, 'media'));
+        const customInput = document.getElementById(paperId(p.name, 'custom'));
+        const orientSelect = document.getElementById(paperId(p.name, 'orient'));
+        if (!mediaSelect || !orientSelect) continue;
+        let media = mediaSelect.value;
+        if (media === '__custom__') media = (customInput && customInput.value.trim()) || '';
+        const orientation = orientSelect.value;
+        out[p.name] = { media: media, orientation: orientation };
+      }
+      return out;
+    }
+
     function collectPrinterRoles() {
       const roles = {};
       for (const def of ROLE_DEFS) {
@@ -649,6 +786,7 @@
       state.apiKey = boot.apiKey || '';
       state.port = boot.port || 9100;
       state.printerRoles = boot.printerRoles || {};
+      state.printerOptions = boot.printerOptions || {};
       state.version = boot.version || '';
 
       document.getElementById('versionLabel').textContent =
@@ -700,6 +838,33 @@
         await loadAll();
       } catch (e) {
         toast(e.message, false);
+      }
+    });
+
+    document.getElementById('btnSavePaper').addEventListener('click', async () => {
+      const btn = document.getElementById('btnSavePaper');
+      btn.disabled = true;
+      try {
+        const collected = collectPrinterOptions();
+        for (const [printer, opts] of Object.entries(collected)) {
+          const path = '/printer-options/' + encodeURIComponent(printer);
+          if (!opts.media && !opts.orientation) {
+            await api(path, { method: 'DELETE' }).catch((err) => {
+              if (err.status !== 404) throw err;
+            });
+          } else {
+            await api(path, {
+              method: 'PUT',
+              body: JSON.stringify(opts),
+            });
+          }
+        }
+        toast('Papel y orientación guardados');
+        await loadAll();
+      } catch (e) {
+        toast(e.message, false);
+      } finally {
+        btn.disabled = false;
       }
     });
 

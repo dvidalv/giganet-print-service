@@ -55,13 +55,12 @@ router.put('/:printerName', (req, res) => {
 
   try {
     const config = getConfig();
-    const newPrinterOptions = {
-      ...config.printerOptions,
-      [printerName]: {
-        ...(config.printerOptions?.[printerName] || {}),
-        ...options,
-      },
-    };
+    const newPrinterOptions = { ...(config.printerOptions || {}) };
+    if (Object.keys(options).length === 0) {
+      delete newPrinterOptions[printerName];
+    } else {
+      newPrinterOptions[printerName] = options;
+    }
 
     updateConfig({ printerOptions: newPrinterOptions });
 

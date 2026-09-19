@@ -1,7 +1,7 @@
 /* Giganet Print Service — PWA service worker */
 'use strict';
 
-const CACHE_NAME = 'giganet-print-pwa-v12';
+const CACHE_NAME = 'giganet-print-pwa-v13';
 const PRECACHE_URLS = [
   '/settings',
   '/manifest.webmanifest',
@@ -23,6 +23,7 @@ const NETWORK_ONLY_PREFIXES = [
   '/settings/bootstrap',
   '/settings/start',
   '/settings/stop',
+  '/printer-options',
 ];
 
 function isApiRequest(pathname) {

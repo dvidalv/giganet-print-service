@@ -197,6 +197,7 @@ http://127.0.0.1:3000
 Vacío = usa la predeterminada.
 
 3. **Probar impresión** y **Probar role**.
+4. En **Tamaño de papel y orientación**, elige papel y retrato/paisaje por cola (o déjalo vacío para usar el del role) → **Guardar papel y orientación**.
 
 ### Iniciar / Detener
 
