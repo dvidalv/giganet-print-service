@@ -1,12 +1,11 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
-const path = require('path');
 const { execFileSync } = require('child_process');
+const { LAUNCH_AGENT_LABEL, getLaunchAgentPlistPath } = require('../platform');
 
-const LABEL = 'com.giganet.printservice';
-const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
+const LABEL = LAUNCH_AGENT_LABEL;
+const PLIST_PATH = getLaunchAgentPlistPath();
 
 function uidDomain() {
   return `gui/${process.getuid()}`;

@@ -1,12 +1,16 @@
 # Giganet Print Service
 
-Servicio local de impresión para **macOS** (Apple Silicon e Intel). Expone una API HTTP en `127.0.0.1` para que tu aplicación web o PWA imprima PDF (y raw/ESC/POS) en impresoras CUPS **sin** el diálogo del navegador y **sin** QZ Tray.
+Servicio local de impresión para **macOS** (Apple Silicon e Intel) y **Windows 10/11**. Expone una API HTTP en `127.0.0.1` para que tu aplicación web o PWA imprima PDF (y raw/ESC/POS) **sin** el diálogo del navegador y **sin** QZ Tray.
+
+La API es la misma en Mac y PC. LPCR no distingue el sistema: habla con `http://127.0.0.1:9100` en **esa** computadora.
+
+Manuales paso a paso: [`INSTALACION.md`](INSTALACION.md) (Mac) · [`INSTALACION-WINDOWS.md`](INSTALACION-WINDOWS.md) (PC).
 
 ## Requisitos
 
-- macOS 12+
+- macOS 12+ **o** Windows 10/11
 - Node.js 20 LTS o superior
-- Impresoras instaladas en el sistema (CUPS / Preferencias del Sistema)
+- Impresoras instaladas en el sistema (CUPS en Mac, spooler de Windows en PC)
 
 ## Instalación rápida
 
@@ -16,12 +20,19 @@ npm install
 npm run install-service
 ```
 
-Esto:
+En **macOS** esto:
 
 1. Crea `~/Library/Application Support/GiganetPrintService/config.json`
 2. Genera una **API Key** segura si no existe
 3. Registra el LaunchAgent `com.giganet.printservice`
 4. Arranca el servicio en el login del usuario
+
+En **Windows** esto:
+
+1. Crea `%APPDATA%\GiganetPrintService\config.json`
+2. Genera o reutiliza la API Key
+3. Descarga SumatraPDF portable para PDF silencioso
+4. Registra la tarea programada `GiganetPrintService` (al iniciar sesión)
 
 Abre la consola de configuración:
 
@@ -29,7 +40,7 @@ Abre la consola de configuración:
 
 Para usarla como app (PWA): en Chrome/Edge pulsa **Instalar app**; en Safari, **Archivo → Añadir al Dock**.
 
-Arranque manual (sin LaunchAgent):
+Arranque manual (sin autoarranque):
 
 ```bash
 npm start
@@ -46,7 +57,7 @@ npm run uninstall-service
 | Método | Ruta | API Key | Descripción |
 |--------|------|---------|-------------|
 | GET | `/status` | No | Health check / descubrimiento desde la PWA |
-| GET | `/printers` | Sí | Lista impresoras CUPS |
+| GET | `/printers` | Sí | Lista impresoras del sistema |
 | POST | `/print` | Sí | Imprime `pdf`, `raw` o `escpos` |
 | GET | `/config` | Sí | Lee configuración (sin secretos en remoto) |
 | POST | `/config` | Sí | Actualiza `defaultPrinter`, orígenes, etc. |
@@ -125,7 +136,8 @@ Códigos: `UNAUTHORIZED`, `CORS_ORIGIN_NOT_ALLOWED`, `PRINTER_NOT_FOUND`, `PRINT
 
 Archivo de configuración:
 
-`~/Library/Application Support/GiganetPrintService/config.json`
+- macOS: `~/Library/Application Support/GiganetPrintService/config.json`
+- Windows: `%APPDATA%\GiganetPrintService\config.json`
 
 ```json
 {
@@ -153,7 +165,8 @@ Archivo de configuración:
 
 Logs:
 
-`~/Library/Logs/GiganetPrintService/`
+- macOS: `~/Library/Logs/GiganetPrintService/`
+- Windows: `%LOCALAPPDATA%\GiganetPrintService\logs\`
 
 ## Integración PWA / Next.js
 
@@ -221,7 +234,7 @@ Opciones avanzadas (solo si un navegador concreto bloquea HTTP loopback de forma
 
 - Distribuir un **perfil MDM** / certificado de empresa (entornos corporativos)
 - Usar un **helper nativo** (LaunchAgent + app firmada) que la PWA detecta vía el mismo HTTP loopback
-- Túnel local con certificado **públicamente confiable** (complejo; normalmente innecesario para POS en Mac)
+- Túnel local con certificado **públicamente confiable** (complejo; normalmente innecesario para POS local)
 
 Este repositorio **no** implementa HTTPS local con certificados inseguros a propósito.
 
@@ -237,14 +250,18 @@ giganet-print-service/
 │   └── icons/
 ├── scripts/
 │   ├── install-service.js
+│   ├── install-windows.js
 │   ├── uninstall-service.js
+│   ├── uninstall-windows.js
+│   ├── windows/           # PowerShell: impresoras, PDF, RAW, tarea
 │   └── generate-pwa-icons.js
 ├── examples/nextjs/
 ├── src/
 │   ├── server.js
 │   ├── config.js
+│   ├── platform.js
 │   ├── routes/
-│   ├── services/
+│   ├── services/          # CUPS (macOS) | Windows spooler
 │   ├── printers/          # pdf | raw | escpos
 │   ├── middleware/
 │   └── utils/
@@ -261,12 +278,22 @@ giganet-print-service/
 
 La API y el POS no cambian: la PWA es solo la consola de configuración, con icono en Dock/escritorio y ventana propia.
 
-## LaunchAgent
+## Autoarranque
+
+### macOS (LaunchAgent)
 
 Plist: `~/Library/LaunchAgents/com.giganet.printservice.plist`
 
 - `RunAtLoad` + `KeepAlive`
 - Logs launchd: `~/Library/Logs/GiganetPrintService/launchd.*.log`
+
+### Windows (tarea programada)
+
+Tarea: `GiganetPrintService` (Programador de tareas, al iniciar sesión del usuario).
+
+- Reinicio automático si el proceso cae
+- PDF silencioso: SumatraPDF en `%LOCALAPPDATA%\GiganetPrintService\tools\`
+- RAW / ESC-POS: `winspool` (sin compartir la impresora)
 
 ## Desarrollo
 

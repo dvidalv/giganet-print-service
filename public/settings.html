@@ -418,7 +418,7 @@
       <section>
         <h2>Tamaño de papel y orientación</h2>
         <p class="hint" style="margin-top:0;margin-bottom:14px">
-          Por cola CUPS. Vacío = usa el tamaño del tipo de documento (etiqueta 2×1, ticket, carta).
+          Por impresora. Vacío = usa el tamaño del tipo de documento (etiqueta 2×1, ticket, carta).
           Si eliges un tamaño aquí, aplica a todo lo que salga por esa impresora.
           En <strong>Otro</strong> puedes usar pulgadas o milímetros:
           <code>Custom.2x1in</code> o <code>Custom.100x50mm</code>.
@@ -445,7 +445,7 @@
           <button type="button" class="secondary" id="btnRegenKey">Regenerar</button>
         </div>
         <p class="hint">
-          Todas las Mac deben usar <strong>la misma</strong> clave que
+          Todas las computadoras (Mac y PC) deben usar <strong>la misma</strong> clave que
           <code>NEXT_PUBLIC_GIGANET_PRINT_KEY</code> en Vercel. Si el instalador generó otra, pégala aquí y guarda.
           Regenerar obliga a actualizar Vercel y hacer redeploy.
         </p>
@@ -490,7 +490,38 @@
       { value: '__custom__', label: 'Otro (pulgadas o mm)' },
     ];
 
-    const state = { apiKey: '', port: 9100, printers: [], printerRoles: {}, printerOptions: {}, version: '' };
+    const state = {
+      apiKey: '',
+      port: 9100,
+      printers: [],
+      printerRoles: {},
+      printerOptions: {},
+      version: '',
+      platform: '',
+      os: '',
+    };
+
+    function isWindows() {
+      return state.platform === 'win32' || state.os === 'Windows';
+    }
+
+    function thisComputer() {
+      return isWindows() ? 'este PC' : 'esta Mac';
+    }
+
+    function emptyPrintersHint() {
+      if (isWindows()) {
+        return 'No hay impresoras. En este PC: Configuración → Bluetooth y dispositivos → Impresoras y escáneres.';
+      }
+      return 'No hay impresoras CUPS. En esta Mac: Ajustes → Impresoras y escáneres, luego en Terminal <code>lpstat -p</code>.';
+    }
+
+    function startProcessHint() {
+      if (isWindows()) {
+        return 'El proceso no está en marcha. En PowerShell: cd %USERPROFILE%\\giganet-print-service && npm start';
+      }
+      return 'El proceso no está en marcha. En Terminal: cd ~/Applications/giganet-print-service && npm start';
+    }
 
     function toast(message, ok = true) {
       const el = document.getElementById('toast');
@@ -643,7 +674,7 @@
 
       if (!state.printers.length) {
         list.innerHTML =
-          '<li><span class="meta">No hay impresoras CUPS. En esta Mac: Ajustes → Impresoras y escáneres, luego en Terminal <code>lpstat -p</code>.</span></li>';
+          '<li><span class="meta">' + emptyPrintersHint() + '</span></li>';
         renderPrinterPicker(picker, select, '', false);
         renderRoleFields(state.printerRoles);
         renderPaperFields();
@@ -698,7 +729,7 @@
       const wrap = document.getElementById('paperFields');
       wrap.innerHTML = '';
       if (!state.printers.length) {
-        wrap.innerHTML = '<p class="hint">No hay impresoras CUPS para configurar.</p>';
+        wrap.innerHTML = '<p class="hint">No hay impresoras para configurar.</p>';
         return;
       }
 
@@ -812,9 +843,12 @@
       state.printerRoles = boot.printerRoles || {};
       state.printerOptions = boot.printerOptions || {};
       state.version = boot.version || '';
+      state.platform = boot.platform || '';
+      state.os = boot.os || '';
 
       document.getElementById('versionLabel').textContent =
         (boot.service || 'Giganet Print Service') + ' · v' + (boot.version || '1.0.0') +
+        (state.os ? ' · ' + state.os : '') +
         ' · http://127.0.0.1:' + state.port;
 
       document.getElementById('apiKey').value = state.apiKey;
@@ -835,7 +869,7 @@
         const list = document.getElementById('printerList');
         list.innerHTML =
           '<li><span class="meta">' +
-          escapeHtml(e.message || 'No se pudieron listar las impresoras CUPS') +
+          escapeHtml(e.message || 'No se pudieron listar las impresoras') +
           '</span></li>';
         toast(e.message, false);
       }
@@ -977,7 +1011,7 @@
         btn.disabled = false;
         if (!e.status) {
           toast(
-            'El proceso no está en marcha. En Terminal: cd ~/Applications/giganet-print-service && npm start',
+            startProcessHint(),
             false
           );
           setStatus('err', 'Proceso apagado');
@@ -988,7 +1022,7 @@
     });
 
     document.getElementById('btnStopService').addEventListener('click', async () => {
-      if (!confirm('¿Pausar la impresión en esta Mac? LPCR no imprimirá hasta que pulses Iniciar servicio.')) {
+      if (!confirm('¿Pausar la impresión en ' + thisComputer() + '? LPCR no imprimirá hasta que pulses Iniciar servicio.')) {
         return;
       }
       const btn = document.getElementById('btnStopService');

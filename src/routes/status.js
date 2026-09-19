@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const { SERVICE_NAME, SERVICE_VERSION, getConfig } = require('../config');
+const { platformId, platformLabel } = require('../platform');
 
 const router = express.Router();
 
@@ -33,6 +34,9 @@ router.get('/', (req, res) => {
     paused,
     service: SERVICE_NAME,
     version: SERVICE_VERSION,
+    platform: process.platform,
+    os: platformLabel(),
+    osId: platformId(),
     assets: publicAssetsStamp(),
   });
 });

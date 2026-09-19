@@ -13,7 +13,7 @@ function respondPaused(req, res, paused) {
     return res.status(403).json({
       success: false,
       error: 'FORBIDDEN',
-      message: 'Solo permitido desde esta Mac (localhost)',
+      message: 'Solo permitido desde esta computadora (localhost)',
     });
   }
   const updated = updateConfig({ paused: Boolean(paused) });

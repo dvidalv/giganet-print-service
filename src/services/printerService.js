@@ -7,7 +7,7 @@ const {
   lpOptionsForRole,
   lpOptionsForPrinter,
 } = require('../config');
-const cupsService = require('./cupsService');
+const printBackend = require('./printBackend');
 const pdfPrinter = require('../printers/pdfPrinter');
 const rawPrinter = require('../printers/rawPrinter');
 const escposPrinter = require('../printers/escposPrinter');
@@ -41,7 +41,7 @@ async function resolvePrinter(opts = {}) {
     );
   }
 
-  const printer = await cupsService.getPrinter(name);
+  const printer = await printBackend.getPrinter(name);
   if (!printer) {
     throw createError('PRINTER_NOT_FOUND', 'La impresora indicada no existe', 404);
   }
@@ -131,7 +131,7 @@ async function printDocument(payload) {
 }
 
 async function listPrinters() {
-  return cupsService.listPrinters();
+  return printBackend.listPrinters();
 }
 
 /**

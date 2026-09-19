@@ -210,8 +210,16 @@ function uidDomain() {
 }
 
 function main() {
+  if (process.platform === 'win32') {
+    return require('./install-windows')
+      .main()
+      .catch((err) => {
+        console.error(err.message || err);
+        process.exit(1);
+      });
+  }
   if (process.platform !== 'darwin') {
-    console.error('install-service solo está soportado en macOS.');
+    console.error('install-service solo está soportado en macOS y Windows.');
     process.exit(1);
   }
 
