@@ -1,28 +1,49 @@
-# Manual de instalación — Giganet Print Service (LPCR)
+# Manual de instalación — Giganet Print Service
 
-Servicio **local de macOS**. LPCR en internet (`https://app.contrerasrobledo.com`) no imprime solo: en **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, con las impresoras de **esa** computadora.
+Servicio **local de macOS** para que LPCR imprima en silencio (Zebra 2×1, Epson 80 mm, HP carta) sin el diálogo del navegador.
 
-No se instala en Windows. No se copia `node_modules` ni el LaunchAgent de otra Mac.
+LPCR en internet (`https://app.contrerasrobledo.com`) **no imprime solo**. En **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, usando las impresoras CUPS **de esa** computadora.
+
+- Solo macOS (Apple Silicon o Intel). No hay instalador de Windows.
+- No copies `node_modules` ni el LaunchAgent de otra Mac.
+- Cerrar la PWA o Chrome **no** apaga el servicio.
+
+Versión actual del paquete: **1.2.6**. El encabezado de `/settings` debe coincidir con el `git pull`.
 
 ---
 
-## Idea clave: una sola API Key
+## Cómo encaja todo
 
-LPCR en Vercel lleva embebida `NEXT_PUBLIC_GIGANET_PRINT_KEY`.
+```text
+Chrome en esta Mac
+    → https://app.contrerasrobledo.com  (LPCR en Vercel)
+    → http://127.0.0.1:9100             (este servicio, solo en esta Mac)
+    → CUPS                              (impresoras de esta Mac)
+```
 
-- **Primera Mac (o primer setup de Vercel):** se genera una key, se copia a Vercel y se hace **redeploy**.
-- **Mac siguientes:** el instalador genera *otra* key. **No la uses.** Pega la **misma** de Vercel / de la Mac que ya imprime.
+Vercel lleva embebidas la URL y la API Key. El servicio local debe usar **la misma** key. Las impresoras se eligen en cada Mac.
 
-Si las keys no coinciden, producción no autentica contra esa Mac.
+---
+
+## Una sola API Key para todo el laboratorio
+
+`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel es la clave que LPCR envía a `127.0.0.1:9100`.
+
+| Situación | Qué hacer |
+|-----------|-----------|
+| **Primera Mac** (Vercel aún no tiene key) | `npm run install-service` genera una. Cópiala a Vercel y haz **redeploy**. |
+| **Mac siguientes** | El instalador puede generar *otra* key. **No la uses.** Pasa la de Vercel con `GIGANET_PRINT_KEY` o pégala en `/settings` → **Guardar clave**. |
+
+Si las keys no coinciden, producción no autentica contra esa Mac. **No pulses Regenerar** en una Mac extra: invalidarías la key de Vercel hasta un redeploy.
 
 ---
 
 ## Requisitos
 
-- macOS 12+ (Apple Silicon o Intel)
-- Usuario con el que se abrirá Chrome y LPCR
-- **Node.js 20 LTS o superior** — https://nodejs.org o `brew install node`
-- Impresoras agregadas en **Ajustes del Sistema → Impresoras y escáneres** (CUPS)
+- macOS 12 o superior
+- La misma cuenta de usuario con la que se abre Chrome y LPCR
+- **Node.js 20 LTS o superior** — [nodejs.org](https://nodejs.org) o `brew install node`
+- Impresoras en **Ajustes del Sistema → Impresoras y escáneres** (CUPS)
 
 Comprobar Node:
 
@@ -35,13 +56,13 @@ npm -v
 
 ## 1. Copiar el proyecto
 
-Carpeta fija (el autoarranque apunta a esta ruta; no la borres):
+Usa una carpeta fija. El LaunchAgent apunta a esa ruta; no la borres ni la muevas después.
 
 ```text
 ~/Applications/giganet-print-service
 ```
 
-**Git (recomendado):**
+El repo es **público**. En cada Mac:
 
 ```bash
 mkdir -p ~/Applications
@@ -50,7 +71,11 @@ git clone https://github.com/dvidalv/giganet-print-service.git
 cd giganet-print-service
 ```
 
-**USB / AirDrop:** copia la carpeta del repo **sin** `node_modules`.
+Usa **HTTPS**, no `git@github.com:...`. SSH pide una llave aunque el repo sea público; en una Mac de secretaría eso termina en `Permission denied (publickey)`.
+
+Si GitHub pregunta *Are you sure you want to continue connecting* (solo con SSH), escribe **`yes`** completo, no solo `y`.
+
+No hace falta usuario, token ni `sudo`.
 
 ---
 
@@ -63,8 +88,6 @@ npm install
 
 ### Mac adicional (ya hay key en Vercel)
 
-Pega la key de producción en el comando:
-
 ```bash
 GIGANET_PRINT_KEY='PEGA_AQUI_LA_KEY_DE_VERCEL' npm run install-service
 ```
@@ -75,29 +98,49 @@ GIGANET_PRINT_KEY='PEGA_AQUI_LA_KEY_DE_VERCEL' npm run install-service
 npm run install-service
 ```
 
-`install-service` crea:
+**No uses `sudo`.** El LaunchAgent es del usuario.
 
-1. `~/Library/Application Support/GiganetPrintService/config.json`
-2. API Key (nueva, o la de `GIGANET_PRINT_KEY`)
-3. LaunchAgent `com.giganet.printservice` (arranca al iniciar sesión)
+`install-service` hace esto:
 
-Comprobar:
+1. Crea o reutiliza `~/Library/Application Support/GiganetPrintService/config.json`
+2. Deja una API Key (nueva, o la de `GIGANET_PRINT_KEY`)
+3. Registra el LaunchAgent `com.giganet.printservice` (arranca al iniciar sesión)
+4. Libera el puerto 9100 si lo ocupaba un `npm start` viejo
+5. Espera a que `/status` responda
+
+Es normal ver avisos de `Boot-out` / `Unload` con *Input/output error* al quitar un agente anterior. El comando termina bien si al final imprime **Listo** y una línea **Verificación** con `"status":"online"`.
+
+Comprobar a mano:
 
 ```bash
 curl http://127.0.0.1:9100/status
 ```
 
-Esperado:
+Esperado (la versión debe ser la del repo, hoy 1.2.6):
 
 ```json
-{ "status": "online", "service": "Giganet Print Service", "version": "1.2.1" }
+{
+  "status": "online",
+  "paused": false,
+  "service": "Giganet Print Service",
+  "version": "1.2.6"
+}
 ```
+
+Si `install-service` no puede registrar launchd:
+
+```bash
+launchctl enable gui/$(id -u)/com.giganet.printservice
+npm run install-service
+```
+
+Mientras tanto: `npm start` (queda en esa Terminal; no es autoarranque).
 
 ---
 
 ## 3. Impresoras en esta Mac
 
-El servicio **solo lista colas CUPS de esta computadora**. No hereda las de otra Mac.
+El servicio **solo lista colas CUPS de esta computadora**. Los nombres no tienen que coincidir con otra Mac: se mapean en roles.
 
 1. **Ajustes del Sistema → Impresoras y escáneres → Agregar** (USB, red o IP).
 2. En Terminal:
@@ -107,7 +150,7 @@ lpstat -p
 lpstat -d
 ```
 
-Debe aparecer `printer NOMBRE is idle` (o equivalente). Si no hay destinos, agrégalas en Ajustes y vuelve a `lpstat -p`.
+Debe listar las colas (`printer NOMBRE is idle`, o el equivalente en español). Si no hay destinos, agrégalas en Ajustes y vuelve a `lpstat -p`.
 
 ---
 
@@ -117,17 +160,17 @@ En **esa** Mac abre:
 
 [http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings)
 
-Estado: **En línea**.
+El badge debe decir **En línea**.
 
 ### API Key
 
 1. Si instalaste **sin** `GIGANET_PRINT_KEY`, pega la de Vercel (o de la Mac que ya imprime).
 2. **Guardar clave**.
-3. **No pulses Regenerar** en una Mac extra (rompería el POS hasta un redeploy).
+3. En una Mac extra, **no pulses Regenerar**.
 
 ### Dominios permitidos (CORS)
 
-Uno por línea → **Guardar orígenes**:
+Uno por línea → **Guardar orígenes**. El valor por defecto ya incluye producción:
 
 ```text
 https://app.contrerasrobledo.com
@@ -141,8 +184,8 @@ http://127.0.0.1:3000
 
 ### Impresoras y roles
 
-1. Elige **impresora predeterminada** → **Guardar impresora**.
-2. En **Impresoras por tipo de documento**, pulsa la cola de cada tipo (lista visible, no el menú nativo de macOS) → **Guardar roles**.
+1. Elige **impresora predeterminada** en la lista visible (no el menú nativo de macOS, que en modo oscuro a veces no se lee) → **Guardar impresora**.
+2. En **Impresoras por tipo de documento**, asigna una cola a cada tipo → **Guardar roles**.
 
 | Role | Documento en LPCR | Impresora típica |
 |------|-------------------|------------------|
@@ -155,7 +198,47 @@ Vacío = usa la predeterminada.
 
 3. **Probar impresión** y **Probar role**.
 
-Opcional — consola como app: Chrome/Edge **Instalar app**; Safari **Archivo → Añadir al Dock**.
+### Iniciar / Detener
+
+- **Detener servicio** pausa la impresión. LPCR no imprime. El proceso **sigue** en `127.0.0.1:9100`.
+- **Iniciar servicio** reanuda.
+- Cerrar la ventana de `/settings` no pausa ni apaga nada.
+
+Si el proceso está muerto de verdad (nada en el puerto 9100), la PWA no puede ejecutarlo: `npm start` o `npm run install-service`.
+
+### Instalar la consola como app (PWA)
+
+1. Abre [http://127.0.0.1:9100/settings](http://127.0.0.1:9100/settings) en Chrome o Edge.
+2. Instálala: icono de instalar en la barra de direcciones, o menú → **Instalar Giganet Print**.
+3. En Safari: **Archivo → Añadir al Dock** (el icono sí queda en el Dock).
+
+#### Dónde buscar el icono en el Mac
+
+Chrome **no** lo pone en el Dock ni en `/Aplicaciones` (la carpeta Aplicaciones de todo el sistema). Queda en la carpeta de apps de **tu usuario**:
+
+```text
+~/Applications/Chrome Apps.localized/Giganet Print Service.app
+```
+
+En Finder:
+
+1. **Ir → Ir a la carpeta…** (Mayús+Cmd+G)
+2. Pega exactamente: `~/Applications/Chrome Apps.localized`
+3. Ahí está **Giganet Print Service**
+4. Arrástrala al **Dock** o al escritorio si quieres abrirla sin pasar por Chrome
+
+Otros sitios:
+
+| Dónde | Qué buscar |
+|-------|------------|
+| Spotlight (Cmd+Espacio) | `Giganet Print Service` |
+| Chrome | `chrome://apps` |
+| Edge | `~/Applications/Edge Apps.localized/` (o `Microsoft Edge Apps.localized`) |
+| Safari | El Dock, después de **Añadir al Dock** |
+
+Launchpad a menudo **no** muestra las apps de `Chrome Apps.localized`. Si no la ves ahí, usa Finder o Spotlight.
+
+La PWA comprueba actualizaciones cada 30 s y al enfocar la ventana. Si cambió `/settings` o la versión del servicio, recarga sola. Un cambio en el código del servidor (`src/`) sigue pidiendo `git pull` + `npm run install-service`.
 
 ---
 
@@ -168,7 +251,7 @@ Solo hace falta **una vez** para todo el laboratorio. No se cambia al añadir ot
 | `NEXT_PUBLIC_GIGANET_PRINT_URL` | `http://127.0.0.1:9100` |
 | `NEXT_PUBLIC_GIGANET_PRINT_KEY` | la API Key de `/settings` (la que van a compartir todas las Mac) |
 
-Production (y Preview si aplica) → **Redeploy**. Las `NEXT_PUBLIC_*` se embeben en el build.
+Production (y Preview si aplica) → **Redeploy**. Las `NEXT_PUBLIC_*` se embeben en el build; guardar la variable sin redeploy no basta.
 
 ---
 
@@ -180,7 +263,7 @@ Production (y Preview si aplica) → **Redeploy**. Las `NEXT_PUBLIC_*` se embebe
 
 Si lo bloqueaste: candado de la barra → configuración del sitio → **Red local** → **Permitir** → recarga e imprime de nuevo.
 
-La impresión sale en silencio a CUPS, sin el diálogo del navegador.
+La impresión sale en silencio a CUPS.
 
 ---
 
@@ -193,18 +276,18 @@ npm install
 npm run install-service
 ```
 
-Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela otra vez). Comprueba la versión en el encabezado.
+Abre o espera a que la PWA recargue `/settings`. El encabezado debe mostrar la versión nueva.
 
 ---
 
-## Comandos útiles
+## Día a día
 
-| Acción | Comando |
-|--------|---------|
+| Acción | Dónde |
+|--------|--------|
+| Pausar / reanudar impresión | `/settings` → **Detener** / **Iniciar** |
 | Arranque manual (sin LaunchAgent) | `npm start` |
-| Instalar / reiniciar autoarranque | `npm run install-service` |
+| Instalar o reiniciar autoarranque | `npm run install-service` |
 | Instalar con la key de Vercel | `GIGANET_PRINT_KEY='…' npm run install-service` |
-| Iniciar / pausar impresión | `/settings` → **Iniciar servicio** / **Detener servicio** (el proceso sigue vivo) |
 | Quitar autoarranque | `npm run uninstall-service` |
 | Health check | `curl http://127.0.0.1:9100/status` |
 | Listar colas CUPS | `lpstat -p` |
@@ -217,47 +300,64 @@ Recarga http://127.0.0.1:9100/settings (si es PWA, cierra la ventana y ábrela o
 
 | Qué | Ruta |
 |-----|------|
-| Proyecto | `~/Applications/giganet-print-service` (o la que usaste) |
+| Proyecto | `~/Applications/giganet-print-service` (o la carpeta que usaste al clonar) |
 | Configuración / API Key | `~/Library/Application Support/GiganetPrintService/config.json` |
 | Logs | `~/Library/Logs/GiganetPrintService/` |
 | LaunchAgent | `~/Library/LaunchAgents/com.giganet.printservice.plist` |
+| App PWA (Chrome) | `~/Applications/Chrome Apps.localized/Giganet Print Service.app` |
 
 ---
 
 ## Problemas frecuentes
 
-### Detener servicio dice que el proceso es anterior a v1.2.4
+### No encuentro el icono de la app PWA
 
-Hay un `npm start` viejo ocupando el puerto 9100. El HTML se actualizó, el Node no.
+No está en `/Aplicaciones` ni suele estar en Launchpad. En Finder: **Ir → Ir a la carpeta…** y pega `~/Applications/Chrome Apps.localized`. La app se llama **Giganet Print Service**. Arrástrala al Dock.
+
+### `Permission denied (publickey)` al clonar
+
+Clonaste por SSH (`git@github.com:...`). El repo es público; esa Mac no necesita llave. Cancela y usa HTTPS:
 
 ```bash
-lsof -ti tcp:9100 | xargs kill
-cd ~/Applications/giganet-print-service
-git pull
+cd ~/Applications
+git clone https://github.com/dvidalv/giganet-print-service.git
+```
+
+### `install-service` termina con *Bootstrap failed: 5*
+
+Suele ser un agente **deshabilitado** o un `bootout` ruidoso. El instalador actual hace `enable` y, si hace falta, `launchctl load -w`. Vuelve a ejecutar `npm run install-service` (sin sudo). Si `/status` no responde:
+
+```bash
+launchctl enable gui/$(id -u)/com.giganet.printservice
+launchctl print gui/$(id -u)/com.giganet.printservice
 npm run install-service
 ```
 
-Recarga `/settings`. El encabezado debe coincidir con la versión del `git pull`. `install-service` ahora libera el puerto 9100 solo.
+### Verificación de `/status` falló al instalar, pero luego sí responde
+
+El proceso tardó un segundo en abrir el puerto. `curl http://127.0.0.1:9100/status` ahora. El instalador reintenta solo; si ves un aviso viejo, ignóralo si el curl actual es `online`.
+
+### Encabezado de `/settings` más viejo que el repo
+
+Hay un Node antiguo en el 9100. `install-service` mata ese proceso y arranca el nuevo. Recarga `/settings` (Cmd+Shift+R si hace falta).
 
 ### Chrome bloqueó 127.0.0.1
 
-Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). CORS de `/settings` debe incluir ese origen.
+Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). En `/settings`, CORS debe incluir ese origen.
 
 ### Settings dice Desconectado / `lpstat: Bad file descriptor`
 
-El HTTP del servicio está bien; falló CUPS. En esa Mac:
+El HTTP del servicio puede estar bien y fallar solo el listado CUPS. Prueba `lpstat -p` en Terminal. Si Terminal también falla, CUPS no está activo: agrega una impresora en Ajustes o:
 
 ```bash
-cd ~/Applications/giganet-print-service
-git pull
-npm run install-service
+sudo launchctl kickstart -k system/org.cups.cupsd
 ```
 
-Si Terminal `lpstat -p` también falla, CUPS no está activo: agrega una impresora en Ajustes del Sistema o `sudo launchctl kickstart -k system/org.cups.cupsd`.
+Luego **Actualizar** en `/settings`.
 
 ### Impresoras disponibles vacío / solo «Usar predeterminada»
 
-CUPS no tiene colas en **esta** Mac. `lpstat -p`, agregar en Ajustes, **Actualizar** en `/settings`. Los nombres no tienen que coincidir con otra Mac: se mapean en roles.
+CUPS no tiene colas en **esta** Mac. `lpstat -p`, agregar en Ajustes, **Actualizar**. Elige la cola en la lista grande de `/settings`, no en el triángulo nativo.
 
 ### La Mac nueva no imprime desde producción
 
@@ -274,6 +374,8 @@ curl http://127.0.0.1:9100/status
 npm run install-service
 ```
 
+`paused: true` significa que alguien pulsó **Detener**. Pulsa **Iniciar servicio**.
+
 ### Cambió de Mac
 
 Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en CUPS de esa máquina.
@@ -283,10 +385,10 @@ Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en CUPS de es
 ## Checklist por Mac
 
 - [ ] Node.js 20+
-- [ ] Repo en carpeta estable (`git clone` o copia sin `node_modules`)
+- [ ] Repo en `~/Applications/giganet-print-service` (`git clone` por HTTPS)
 - [ ] Impresoras en Ajustes del Sistema (`lpstat -p` las lista)
 - [ ] `npm install` + `npm run install-service` (con `GIGANET_PRINT_KEY` si ya existe Vercel)
-- [ ] http://127.0.0.1:9100/status → `online`
+- [ ] `curl http://127.0.0.1:9100/status` → `online` (no `paused`)
 - [ ] `/settings`: API Key **igual** a Vercel → Guardar clave
 - [ ] CORS con `https://app.contrerasrobledo.com`
 - [ ] Predeterminada + roles → Guardar → prueba de impresión
@@ -294,9 +396,9 @@ Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en CUPS de es
 
 **Solo en el primer setup del laboratorio**
 
-- [ ] Variables `NEXT_PUBLIC_GIGANET_PRINT_URL` y `_KEY` en Vercel
+- [ ] Variables `NEXT_PUBLIC_GIGANET_PRINT_URL` y `NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel
 - [ ] Redeploy Production
 
 ---
 
-Detalle técnico del API: `README.md`.
+API y contratos HTTP: `README.md`.
