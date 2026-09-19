@@ -27,8 +27,11 @@ function uidDomain() {
 }
 
 function main() {
+  if (process.platform === 'win32') {
+    return require('./uninstall-windows').main();
+  }
   if (process.platform !== 'darwin') {
-    console.error('uninstall-service solo está soportado en macOS.');
+    console.error('uninstall-service solo está soportado en macOS y Windows.');
     process.exit(1);
   }
 

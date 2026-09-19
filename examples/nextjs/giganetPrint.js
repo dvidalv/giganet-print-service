@@ -80,7 +80,7 @@ export async function checkPrintService() {
 }
 
 /**
- * Lista impresoras CUPS del Mac.
+ * Lista impresoras del servicio local (CUPS en Mac, spooler en Windows).
  */
 export async function getPrinters() {
   const res = await localFetch('/printers', {

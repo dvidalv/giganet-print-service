@@ -189,7 +189,8 @@ Las opciones de impresora tienen mayor prioridad y sobrescriben las del role.
 
 Las opciones se guardan en el archivo de configuración:
 ```
-~/Library/Application Support/GiganetPrintService/config.json
+macOS: ~/Library/Application Support/GiganetPrintService/config.json
+Windows: %APPDATA%\GiganetPrintService\config.json
 ```
 
 Ejemplo de estructura en el archivo:

@@ -2,9 +2,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
+const { getLogDir } = require('../platform');
 
-const LOG_DIR = path.join(os.homedir(), 'Library', 'Logs', 'GiganetPrintService');
+const LOG_DIR = getLogDir();
 
 function ensureLogDir() {
   if (!fs.existsSync(LOG_DIR)) {

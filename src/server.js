@@ -10,6 +10,7 @@ const {
   getConfig,
   getSettingsPageConfig,
 } = require('./config');
+const { platformId, platformLabel } = require('./platform');
 const logger = require('./utils/logger');
 const { corsMiddleware } = require('./middleware/cors');
 const { apiKeyMiddleware } = require('./middleware/apiKey');
@@ -87,6 +88,9 @@ function createApp() {
     res.json({
       service: SERVICE_NAME,
       version: SERVICE_VERSION,
+      platform: process.platform,
+      os: platformLabel(),
+      osId: platformId(),
       ...cfg,
     });
   });

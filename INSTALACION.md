@@ -4,11 +4,11 @@ Servicio **local de macOS** para que LPCR imprima en silencio (Zebra 2×1, Epson
 
 LPCR en internet (`https://app.contrerasrobledo.com`) **no imprime solo**. En **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, usando las impresoras CUPS **de esa** computadora.
 
-- Solo macOS (Apple Silicon o Intel). No hay instalador de Windows.
+- Este manual es **solo macOS** (Apple Silicon o Intel). En un PC con Windows usa [`INSTALACION-WINDOWS.md`](INSTALACION-WINDOWS.md). La API y la API Key son las mismas.
 - No copies `node_modules` ni el LaunchAgent de otra Mac.
 - Cerrar la PWA o Chrome **no** apaga el servicio.
 
-Versión actual del paquete: **1.2.6**. El encabezado de `/settings` debe coincidir con el `git pull`.
+Versión actual del paquete: **1.3.0**. El encabezado de `/settings` debe coincidir con el `git pull`.
 
 ---
 
@@ -116,14 +116,14 @@ Comprobar a mano:
 curl http://127.0.0.1:9100/status
 ```
 
-Esperado (la versión debe ser la del repo, hoy 1.2.6):
+Esperado (la versión debe ser la del repo, hoy 1.3.0):
 
 ```json
 {
   "status": "online",
   "paused": false,
   "service": "Giganet Print Service",
-  "version": "1.2.6"
+  "version": "1.3.0"
 }
 ```
 

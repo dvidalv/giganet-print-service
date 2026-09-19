@@ -2,12 +2,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const crypto = require('crypto');
 const logger = require('./utils/logger');
+const { getSupportDir, getConfigPath, platformLabel } = require('./platform');
 
 const SERVICE_NAME = 'Giganet Print Service';
-const SERVICE_VERSION = '1.2.7';
+const SERVICE_VERSION = '1.3.0';
 
 /** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
 const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];
@@ -25,13 +25,8 @@ function lpOptionsForRole(role) {
   return ROLE_LP_OPTIONS[key] ? [...ROLE_LP_OPTIONS[key]] : [];
 }
 
-const SUPPORT_DIR = path.join(
-  os.homedir(),
-  'Library',
-  'Application Support',
-  'GiganetPrintService'
-);
-const CONFIG_PATH = path.join(SUPPORT_DIR, 'config.json');
+const SUPPORT_DIR = getSupportDir();
+const CONFIG_PATH = getConfigPath();
 const DEFAULT_CONFIG_PATH = path.join(__dirname, '..', 'config', 'default.json');
 
 /** @type {object | null} */
@@ -293,6 +288,8 @@ function getPublicConfig() {
     printerRoles: config.printerRoles,
     printerOptions: config.printerOptions,
     hasApiKey: Boolean(config.apiKey),
+    platform: process.platform,
+    os: platformLabel(),
   };
 }
 

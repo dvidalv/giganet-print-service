@@ -172,7 +172,8 @@ const ORIENTACIONES = {
 
 3. PERSISTENCIA:
    Las opciones se guardan en:
-   ~/Library/Application Support/GiganetPrintService/config.json
+   macOS: ~/Library/Application Support/GiganetPrintService/config.json
+   Windows: %APPDATA%\GiganetPrintService\config.json
 
 4. APLICACIÓN AUTOMÁTICA:
    Una vez configuradas, las opciones se aplican automáticamente a todas

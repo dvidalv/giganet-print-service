@@ -1,7 +1,7 @@
 'use strict';
 
 const { decodeBase64, withTempFile } = require('../utils/tempFiles');
-const cupsService = require('../services/cupsService');
+const printBackend = require('../services/printBackend');
 
 function assertValidPdf(buffer) {
   // PDF magic: %PDF-
@@ -13,14 +13,14 @@ function assertValidPdf(buffer) {
 }
 
 /**
- * Imprime un PDF en Base64 mediante CUPS (lp).
+ * Imprime un PDF en Base64 (CUPS en macOS, spooler de Windows en PC).
  */
 async function printPdf({ printer, data, copies = 1, timeoutMs = 30000, lpOptions = [] }) {
   const buffer = decodeBase64(data);
   assertValidPdf(buffer);
 
   return withTempFile(buffer, '.pdf', async (filePath) => {
-    const result = await cupsService.printFile({
+    const result = await printBackend.printFile({
       printer,
       filePath,
       copies,
