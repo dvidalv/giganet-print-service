@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { getConfig, updateConfig } = require('../config');
+const { getConfig, updateConfig, normalizeOrientation } = require('../config');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -42,15 +42,16 @@ router.put('/:printerName', (req, res) => {
     options.media = String(media).trim();
   }
   if (orientation !== undefined && orientation !== null && orientation !== '') {
-    const orient = String(orientation).trim();
-    if (!['portrait', 'landscape', '3', '4'].includes(orient)) {
+    const orient = normalizeOrientation(orientation);
+    if (!orient) {
       return res.status(400).json({
         success: false,
         error: 'INVALID_ORIENTATION',
-        message: 'Orientación inválida. Use: portrait, landscape, 3 (landscape), o 4 (portrait)',
+        message:
+          'Orientación inválida. Use: portrait, landscape, reverse-portrait, reverse-landscape, o 3–6',
       });
     }
-    options.orientation = orient === 'portrait' ? '4' : orient === 'landscape' ? '3' : orient;
+    options.orientation = orient;
   }
 
   try {

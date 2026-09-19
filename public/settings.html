@@ -420,6 +420,8 @@
         <p class="hint" style="margin-top:0;margin-bottom:14px">
           Por cola CUPS. Vacío = usa el tamaño del tipo de documento (etiqueta 2×1, ticket, carta).
           Si eliges un tamaño aquí, aplica a todo lo que salga por esa impresora.
+          En <strong>Otro</strong> puedes usar pulgadas o milímetros:
+          <code>Custom.2x1in</code> o <code>Custom.100x50mm</code>.
         </p>
         <div id="paperFields" class="role-fields"></div>
         <div class="row">
@@ -479,12 +481,13 @@
       { value: 'Legal', label: 'Legal 8.5×14' },
       { value: 'A4', label: 'A4' },
       { value: 'A5', label: 'A5' },
+      { value: 'Custom.1x2in', label: 'Etiqueta 1×2 pulgadas' },
       { value: 'Custom.2x1in', label: 'Etiqueta 2×1 pulgadas' },
       { value: 'Custom.4x6in', label: 'Etiqueta 4×6 pulgadas' },
       { value: 'Custom.80x200mm', label: 'Ticket 80 mm' },
       { value: 'Custom.58x200mm', label: 'Ticket 58 mm' },
       { value: 'Custom.3x5in', label: '3×5 pulgadas' },
-      { value: '__custom__', label: 'Otro (valor CUPS)' },
+      { value: '__custom__', label: 'Otro (pulgadas o mm)' },
     ];
 
     const state = { apiKey: '', port: 9100, printers: [], printerRoles: {}, printerOptions: {}, version: '' };
@@ -703,11 +706,16 @@
         const saved = state.printerOptions[p.name] || {};
         const savedMedia = saved.media || '';
         const useCustom = savedMedia && !isPresetMedia(savedMedia);
-        const savedOrient = saved.orientation === '3' || saved.orientation === 'landscape'
-          ? 'landscape'
-          : saved.orientation === '4' || saved.orientation === 'portrait'
-            ? 'portrait'
-            : '';
+        const savedOrient =
+          saved.orientation === '5' || saved.orientation === 'reverse-landscape'
+            ? 'reverse-landscape'
+            : saved.orientation === '6' || saved.orientation === 'reverse-portrait'
+              ? 'reverse-portrait'
+              : saved.orientation === '3' || saved.orientation === 'landscape'
+                ? 'landscape'
+                : saved.orientation === '4' || saved.orientation === 'portrait'
+                  ? 'portrait'
+                  : '';
 
         const card = document.createElement('div');
         card.className = 'paper-card';
@@ -734,8 +742,11 @@
             '<div class="field">' +
               '<label for="' + mediaId + '">Tamaño de papel</label>' +
               '<select id="' + mediaId + '">' + mediaOpts + '</select>' +
-              '<input id="' + customId + '" type="text" spellcheck="false" placeholder="Ej. Custom.100x50mm" ' +
+              '<input id="' + customId + '" type="text" spellcheck="false" placeholder="Custom.2x1in o Custom.80x200mm" ' +
                 (useCustom ? 'value="' + escapeHtml(savedMedia) + '"' : 'hidden') + ' />' +
+              '<p class="hint" id="' + paperId(p.name, 'hint') + '"' + (useCustom ? '' : ' hidden') + '>' +
+                'Pulgadas: <code>Custom.2x1in</code>. Milímetros: <code>Custom.80x200mm</code>.' +
+              '</p>' +
             '</div>' +
             '<div class="field">' +
               '<label for="' + orientId + '">Orientación</label>' +
@@ -743,6 +754,8 @@
                 '<option value="">Predeterminada</option>' +
                 '<option value="portrait"' + (savedOrient === 'portrait' ? ' selected' : '') + '>Vertical (retrato)</option>' +
                 '<option value="landscape"' + (savedOrient === 'landscape' ? ' selected' : '') + '>Horizontal (paisaje)</option>' +
+                '<option value="reverse-portrait"' + (savedOrient === 'reverse-portrait' ? ' selected' : '') + '>Vertical invertido (180°)</option>' +
+                '<option value="reverse-landscape"' + (savedOrient === 'reverse-landscape' ? ' selected' : '') + '>Horizontal invertido (180°)</option>' +
               '</select>' +
             '</div>' +
           '</div>';
@@ -750,11 +763,22 @@
 
         const mediaSelect = document.getElementById(mediaId);
         const customInput = document.getElementById(customId);
+        const customHint = document.getElementById(paperId(p.name, 'hint'));
         mediaSelect.addEventListener('change', () => {
-          customInput.hidden = mediaSelect.value !== '__custom__';
-          if (mediaSelect.value === '__custom__') customInput.focus();
+          const custom = mediaSelect.value === '__custom__';
+          customInput.hidden = !custom;
+          if (customHint) customHint.hidden = !custom;
+          if (custom) customInput.focus();
         });
       }
+    }
+
+    function normalizeCustomMedia(raw) {
+      const value = String(raw || '').trim();
+      if (!value) return '';
+      if (/^custom\./i.test(value)) return value.replace(/^custom\./i, 'Custom.');
+      if (/^\d+(\.\d+)?x\d+(\.\d+)?(in|mm)$/i.test(value)) return 'Custom.' + value;
+      return value;
     }
 
     function collectPrinterOptions() {
@@ -765,7 +789,7 @@
         const orientSelect = document.getElementById(paperId(p.name, 'orient'));
         if (!mediaSelect || !orientSelect) continue;
         let media = mediaSelect.value;
-        if (media === '__custom__') media = (customInput && customInput.value.trim()) || '';
+        if (media === '__custom__') media = normalizeCustomMedia(customInput && customInput.value);
         const orientation = orientSelect.value;
         out[p.name] = { media: media, orientation: orientation };
       }

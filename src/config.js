@@ -66,6 +66,22 @@ function normalizePrinterRoles(rawRoles, defaults) {
   return out;
 }
 
+const ORIENTATION_MAP = {
+  portrait: '4',
+  landscape: '3',
+  'reverse-landscape': '5',
+  'reverse-portrait': '6',
+  3: '3',
+  4: '4',
+  5: '5',
+  6: '6',
+};
+
+function normalizeOrientation(value) {
+  const key = String(value || '').trim().toLowerCase();
+  return ORIENTATION_MAP[key] || '';
+}
+
 function normalizePrinterOptions(rawOptions) {
   if (!rawOptions || typeof rawOptions !== 'object') {
     return {};
@@ -78,10 +94,8 @@ function normalizePrinterOptions(rawOptions) {
       opts.media = String(options.media).trim();
     }
     if (options.orientation) {
-      const orient = String(options.orientation).trim();
-      if (['portrait', 'landscape', '3', '4'].includes(orient)) {
-        opts.orientation = orient === 'portrait' ? '4' : orient === 'landscape' ? '3' : orient;
-      }
+      const orient = normalizeOrientation(options.orientation);
+      if (orient) opts.orientation = orient;
     }
     if (Object.keys(opts).length > 0) {
       normalized[printerName] = opts;
@@ -349,5 +363,6 @@ module.exports = {
   getSettingsPageConfig,
   normalizePrinterRoles,
   normalizePrinterOptions,
+  normalizeOrientation,
   resolvePrinterNameFromConfig,
 };
