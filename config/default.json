@@ -19,5 +19,6 @@
     "ticket": "",
     "factura": "",
     "estudio": ""
-  }
+  },
+  "printerOptions": {}
 }

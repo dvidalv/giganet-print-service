@@ -18,6 +18,7 @@ const statusRoutes = require('./routes/status');
 const printersRoutes = require('./routes/printers');
 const printRoutes = require('./routes/print');
 const configRoutes = require('./routes/config');
+const printerOptionsRoutes = require('./routes/printerOptions');
 const testPrintRoutes = require('./routes/testPrint');
 const { handleStop, handleStart } = require('./routes/runState');
 
@@ -100,6 +101,7 @@ function createApp() {
   app.use('/printers', printersRoutes);
   app.use('/print', printRoutes);
   app.use('/config', configRoutes);
+  app.use('/printer-options', printerOptionsRoutes);
   app.use('/test-print', testPrintRoutes);
 
   app.get('/', (req, res) => {
