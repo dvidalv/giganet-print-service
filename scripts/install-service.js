@@ -75,16 +75,96 @@ function buildPlist() {
 `;
 }
 
+function launchctlMessage(err) {
+  return (err.stderr || err.message || '').toString();
+}
+
+function isBenignLaunchctlError(err) {
+  return /not loaded|Could not find|No such process|Input\/output error|already (loaded|bootstrapped|exists)|unrecognized job/i.test(
+    launchctlMessage(err)
+  );
+}
+
 function launchctl(...args) {
   try {
     return execFileSync('launchctl', args, { encoding: 'utf8' });
   } catch (err) {
-    const msg = (err.stderr || err.message || '').toString();
-    // Ignore "not loaded" style errors on bootout
-    if (/not loaded|Could not find|No such process/i.test(msg)) {
+    if (isBenignLaunchctlError(err)) {
       return '';
     }
     throw err;
+  }
+}
+
+function launchctlOrThrow(...args) {
+  return execFileSync('launchctl', args, { encoding: 'utf8' });
+}
+
+function serviceTarget() {
+  return `${uidDomain()}/${LABEL}`;
+}
+
+function unloadPrevious() {
+  const domain = uidDomain();
+  const service = serviceTarget();
+  try {
+    launchctlOrThrow('bootout', service);
+    return;
+  } catch (err) {
+    if (!isBenignLaunchctlError(err)) {
+      /* still try the other forms */
+    }
+  }
+  try {
+    launchctlOrThrow('bootout', domain, PLIST_PATH);
+  } catch {
+    /* ignore */
+  }
+  try {
+    launchctlOrThrow('unload', PLIST_PATH);
+  } catch {
+    /* not loaded */
+  }
+}
+
+function loadLaunchAgent() {
+  const domain = uidDomain();
+  const service = serviceTarget();
+
+  try {
+    launchctlOrThrow('enable', service);
+  } catch (err) {
+    console.warn('No se pudo enable el LaunchAgent:', launchctlMessage(err).trim());
+  }
+
+  try {
+    launchctlOrThrow('bootstrap', domain, PLIST_PATH);
+  } catch (err) {
+    const msg = launchctlMessage(err).trim();
+    if (!/already/i.test(msg)) {
+      console.warn('bootstrap falló, intentando launchctl load -w…');
+      if (msg) console.warn(msg);
+      try {
+        launchctlOrThrow('load', '-w', PLIST_PATH);
+      } catch (loadErr) {
+        const loadMsg = launchctlMessage(loadErr).trim();
+        if (!/already/i.test(loadMsg)) {
+          throw loadErr;
+        }
+      }
+    }
+  }
+
+  try {
+    launchctlOrThrow('enable', service);
+  } catch {
+    /* already enabled */
+  }
+
+  try {
+    launchctlOrThrow('kickstart', '-k', service);
+  } catch (err) {
+    console.warn('Advertencia al iniciar con kickstart:', launchctlMessage(err).trim());
   }
 }
 
@@ -154,40 +234,48 @@ function main() {
   );
   console.log(`Directorio de soporte: ${SUPPORT_DIR}`);
 
-  // Unload previous if present
-  try {
-    launchctl('bootout', uidDomain(), PLIST_PATH);
-  } catch {
-    // ignore
-  }
-
+  unloadPrevious();
   freeListenPort(config.port || 9100);
 
   fs.writeFileSync(PLIST_PATH, buildPlist(), { encoding: 'utf8', mode: 0o644 });
   console.log(`LaunchAgent: ${PLIST_PATH}`);
 
-  launchctl('bootstrap', uidDomain(), PLIST_PATH);
-  launchctl('enable', `${uidDomain()}/${LABEL}`);
   try {
-    launchctl('kickstart', '-k', `${uidDomain()}/${LABEL}`);
+    loadLaunchAgent();
   } catch (err) {
-    console.warn('Advertencia al iniciar con kickstart:', err.message);
+    console.error('\nNo se pudo registrar el LaunchAgent con launchctl.');
+    console.error(launchctlMessage(err).trim() || err.message);
+    console.error('\nEn Terminal.app (no hace falta sudo):');
+    console.error(`  launchctl enable ${serviceTarget()}`);
+    console.error('  npm run install-service');
+    console.error('\nMientras tanto puedes usar: npm start');
+    process.exit(1);
   }
 
   logger.info('Servicio instalado vía LaunchAgent', { plist: PLIST_PATH });
 
+  const port = config.port || 9100;
   console.log('\nListo.');
-  console.log(`  Status:   http://127.0.0.1:${config.port}/status`);
-  console.log(`  Settings: http://127.0.0.1:${config.port}/settings`);
-  try {
-    const status = execFileSync(
-      'curl',
-      ['-sS', '--max-time', '2', `http://127.0.0.1:${config.port}/status`],
-      { encoding: 'utf8' }
-    );
-    console.log(`  Verificación: ${status.trim()}`);
-  } catch {
-    console.warn('  No se pudo leer /status todavía; espera un segundo y recarga /settings.');
+  console.log(`  Status:   http://127.0.0.1:${port}/status`);
+  console.log(`  Settings: http://127.0.0.1:${port}/settings`);
+
+  let verified = '';
+  for (let i = 0; i < 15; i += 1) {
+    try {
+      verified = execFileSync(
+        'curl',
+        ['-sS', '--max-time', '1', `http://127.0.0.1:${port}/status`],
+        { encoding: 'utf8' }
+      ).trim();
+      if (verified) break;
+    } catch {
+      execFileSync('sleep', ['0.2']);
+    }
+  }
+  if (verified) {
+    console.log(`  Verificación: ${verified}`);
+  } else {
+    console.warn('  No se pudo leer /status. Abre /settings o ejecuta: launchctl print gui/$(id -u)/com.giganet.printservice');
   }
   console.log('\nEl servicio arrancará automáticamente al iniciar sesión.');
 }
