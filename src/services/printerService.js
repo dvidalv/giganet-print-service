@@ -78,6 +78,44 @@ function normalizeRole(role) {
 }
 
 /**
+ * Combina opciones de impresora (settings) con las del role.
+ * - media / fit-to-page del role ganan (estudio/factura = Letter, no 2×1 de etiquetas)
+ * - orientation-requested (y landscape) de settings ganan (controles de orientación)
+ */
+function mergeLpOptions(printerLpOptions, roleLpOptions) {
+  const byKey = new Map();
+
+  const put = (opt) => {
+    const value = String(opt || '').trim();
+    if (!value) return;
+    if (value === 'landscape' || value === 'portrait') {
+      byKey.set('cups-orientation-flag', value);
+      return;
+    }
+    const eq = value.indexOf('=');
+    const key = eq === -1 ? value : value.slice(0, eq);
+    byKey.set(key, value);
+  };
+
+  for (const opt of printerLpOptions || []) put(opt);
+  for (const opt of roleLpOptions || []) {
+    const value = String(opt || '').trim();
+    if (!value) continue;
+    // Role no pisa orientación elegida en settings
+    if (
+      value.startsWith('orientation-requested=') ||
+      value === 'landscape' ||
+      value === 'portrait'
+    ) {
+      continue;
+    }
+    put(value);
+  }
+
+  return [...byKey.values()];
+}
+
+/**
  * Despacha la impresión según type: pdf | raw | escpos
  */
 async function printDocument(payload) {
@@ -95,9 +133,10 @@ async function printDocument(payload) {
     throw createError('INVALID_BASE64', 'Falta el campo data (Base64)');
   }
 
-  const roleLpOptions = lpOptionsForRole(role);
-  const printerLpOptions = lpOptionsForPrinter(printer);
-  const combinedLpOptions = [...roleLpOptions, ...printerLpOptions];
+  const combinedLpOptions = mergeLpOptions(
+    lpOptionsForPrinter(printer),
+    lpOptionsForRole(role)
+  );
 
   switch (type) {
     case 'pdf':
