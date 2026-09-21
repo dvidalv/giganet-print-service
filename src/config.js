@@ -320,6 +320,14 @@ function resolvePrinterNameFromConfig({ printer, role } = {}) {
   return String(config.defaultPrinter || '').trim();
 }
 
+function swapCustomMedia(media) {
+  const match = String(media || '').match(
+    /^Custom\.(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)(in|mm)$/i
+  );
+  if (!match) return media;
+  return `Custom.${match[2]}x${match[1]}${match[3]}`;
+}
+
 /**
  * Construye lpOptions desde printerOptions de configuración
  * @param {string} printerName
@@ -332,11 +340,20 @@ function lpOptionsForPrinter(printerName) {
     return [];
   }
   const lpOpts = [];
-  if (options.media) {
-    lpOpts.push(`media=${options.media}`);
+  const orientation = options.orientation
+    ? normalizeOrientation(options.orientation)
+    : '';
+  const rotate90 = orientation === '3' || orientation === '5';
+  let media = options.media ? String(options.media).trim() : '';
+  if (media && rotate90) {
+    media = swapCustomMedia(media);
   }
-  if (options.orientation) {
-    lpOpts.push(`orientation-requested=${options.orientation}`);
+  if (media) {
+    lpOpts.push(`media=${media}`);
+  }
+  if (orientation) {
+    lpOpts.push(`orientation-requested=${orientation}`);
+    if (rotate90) lpOpts.push('landscape');
   }
   return lpOpts;
 }
