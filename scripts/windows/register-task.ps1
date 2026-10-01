@@ -30,7 +30,7 @@ Register-ScheduledTask `
   -Trigger $trigger `
   -Principal $principal `
   -Settings $settings `
-  -Description 'Giganet Print Service — API local de impresión (127.0.0.1)' `
+  -Description 'Giganet Print Service - API local de impresion (127.0.0.1)' `
   | Out-Null
 
 Start-ScheduledTask -TaskName $TaskName
