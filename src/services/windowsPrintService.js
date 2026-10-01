@@ -85,7 +85,7 @@ function runPowerShell(scriptName, extraArgs = [], options = {}) {
 }
 
 function parsePrinterList(stdout) {
-  const raw = String(stdout || '').trim();
+  const raw = String(stdout || '').replace(/^\uFEFF/, '').trim();
   if (!raw) return [];
   let parsed;
   try {
@@ -164,9 +164,31 @@ function sumatraSettingsFromLpOptions(lpOptions, copies) {
   return parts.join(',');
 }
 
+const PRINTER_CACHE_MS = 15000;
+let printerCache = { at: 0, list: null };
+let printerListInFlight = null;
+
 async function listPrinters() {
-  const { stdout } = await runPowerShell('list-printers.ps1', [], { timeout: 20000 });
-  return parsePrinterList(stdout);
+  if (printerCache.list && Date.now() - printerCache.at < PRINTER_CACHE_MS) {
+    return printerCache.list;
+  }
+  if (!printerListInFlight) {
+    printerListInFlight = runPowerShell('list-printers.ps1', [], { timeout: 30000 })
+      .then(({ stdout }) => {
+        const list = parsePrinterList(stdout);
+        printerCache = { at: Date.now(), list };
+        return list;
+      })
+      .finally(() => {
+        printerListInFlight = null;
+      });
+  }
+  try {
+    return await printerListInFlight;
+  } catch (err) {
+    if (printerCache.list) return printerCache.list;
+    throw err;
+  }
 }
 
 async function getDefaultPrinter() {
@@ -176,7 +198,14 @@ async function getDefaultPrinter() {
 }
 
 async function getPrinter(name) {
-  const printers = await listPrinters();
+  let printers;
+  try {
+    printers = await listPrinters();
+  } catch {
+    // Si Windows no responde al listar, se intenta imprimir con el nombre
+    // configurado; el propio envío fallará si la cola no existe.
+    return { name: String(name), default: false, status: 'unknown', enabled: true };
+  }
   return printers.find((p) => samePrinterName(p.name, name)) || null;
 }
 
