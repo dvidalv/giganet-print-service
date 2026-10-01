@@ -72,6 +72,10 @@ function getWindowsStartupLauncherPath() {
   );
 }
 
+function getWindowsHiddenLauncherPath() {
+  return path.join(getSupportDir(), 'start-hidden.vbs');
+}
+
 function getLaunchAgentPlistPath() {
   return path.join(
     os.homedir(),
@@ -98,6 +102,7 @@ module.exports = {
   getLogDir,
   getToolsDir,
   getWindowsStartupLauncherPath,
+  getWindowsHiddenLauncherPath,
   getLaunchAgentPlistPath,
   getConfigPath,
 };

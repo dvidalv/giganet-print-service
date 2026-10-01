@@ -4,7 +4,11 @@ const fs = require('fs');
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { SERVICE_NAME, SUPPORT_DIR, loadConfig } = require('../src/config');
-const { WINDOWS_TASK_NAME, getWindowsStartupLauncherPath } = require('../src/platform');
+const {
+  WINDOWS_TASK_NAME,
+  getWindowsStartupLauncherPath,
+  getWindowsHiddenLauncherPath,
+} = require('../src/platform');
 const logger = require('../src/utils/logger');
 
 function runPs1(scriptName, args) {
@@ -48,6 +52,12 @@ function main() {
     } catch (err) {
       console.warn(`No se pudo borrar ${launcherPath}: ${err.message}`);
     }
+  }
+
+  try {
+    fs.rmSync(getWindowsHiddenLauncherPath(), { force: true });
+  } catch {
+    /* ignore */
   }
 
   const config = loadConfig({ createIfMissing: false });

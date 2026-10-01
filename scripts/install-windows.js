@@ -17,6 +17,7 @@ const {
   getLogDir,
   getToolsDir,
   getWindowsStartupLauncherPath,
+  getWindowsHiddenLauncherPath,
   WINDOWS_TASK_NAME,
 } = require('../src/platform');
 const logger = require('../src/utils/logger');
@@ -144,14 +145,26 @@ function vbsString(value) {
   return String(value).replace(/"/g, '""');
 }
 
-function buildStartupLauncher() {
+/**
+ * VBS que arranca node sin ventana y espera a que termine, devolviendo su
+ * código de salida (la tarea programada lo usa para reintentar si falla).
+ */
+function buildHiddenLauncher() {
   const command = `"${NODE_BIN}" "${SERVER_JS}"`;
   return [
     'Set shell = CreateObject("WScript.Shell")',
     `shell.CurrentDirectory = "${vbsString(PROJECT_ROOT)}"`,
-    `shell.Run "${vbsString(command)}", 0, False`,
+    `WScript.Quit shell.Run("${vbsString(command)}", 0, True)`,
     '',
   ].join('\r\n');
+}
+
+function writeHiddenLauncher(launcherPath) {
+  fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
+  // UTF-16LE con BOM: wscript lee mal UTF-8 si la ruta tiene acentos.
+  const body = Buffer.from(buildHiddenLauncher(), 'utf16le');
+  fs.writeFileSync(launcherPath, Buffer.concat([Buffer.from([0xff, 0xfe]), body]));
+  return launcherPath;
 }
 
 /**
@@ -159,11 +172,7 @@ function buildStartupLauncher() {
  * el servidor oculto al iniciar sesión.
  */
 function installStartupLauncher() {
-  const launcherPath = getWindowsStartupLauncherPath();
-  fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
-  // UTF-16LE con BOM: wscript lee mal UTF-8 si la ruta tiene acentos.
-  const body = Buffer.from(buildStartupLauncher(), 'utf16le');
-  fs.writeFileSync(launcherPath, Buffer.concat([Buffer.from([0xff, 0xfe]), body]));
+  const launcherPath = writeHiddenLauncher(getWindowsStartupLauncherPath());
   const child = spawn('wscript.exe', [launcherPath], {
     detached: true,
     stdio: 'ignore',
@@ -256,11 +265,11 @@ async function main() {
 
   let startupLauncher = '';
   try {
+    const hiddenLauncher = writeHiddenLauncher(getWindowsHiddenLauncherPath());
     runPs1(
       'register-task.ps1',
       [
-        '-NodePath', NODE_BIN,
-        '-ServerJs', SERVER_JS,
+        '-LauncherPath', hiddenLauncher,
         '-WorkingDirectory', PROJECT_ROOT,
         '-TaskName', WINDOWS_TASK_NAME,
       ],
