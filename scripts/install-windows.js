@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const {
   ensureSupportDir,
   loadConfig,
@@ -13,7 +13,12 @@ const {
   SUPPORT_DIR,
   SERVICE_NAME,
 } = require('../src/config');
-const { getLogDir, getToolsDir, WINDOWS_TASK_NAME } = require('../src/platform');
+const {
+  getLogDir,
+  getToolsDir,
+  getWindowsStartupLauncherPath,
+  WINDOWS_TASK_NAME,
+} = require('../src/platform');
 const logger = require('../src/utils/logger');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -135,6 +140,48 @@ async function ensureSumatra() {
   }
 }
 
+function vbsString(value) {
+  return String(value).replace(/"/g, '""');
+}
+
+function buildStartupLauncher() {
+  const command = `"${NODE_BIN}" "${SERVER_JS}"`;
+  return [
+    'Set shell = CreateObject("WScript.Shell")',
+    `shell.CurrentDirectory = "${vbsString(PROJECT_ROOT)}"`,
+    `shell.Run "${vbsString(command)}", 0, False`,
+    '',
+  ].join('\r\n');
+}
+
+/**
+ * Plan B sin permisos: script en la carpeta Inicio del usuario que arranca
+ * el servidor oculto al iniciar sesión.
+ */
+function installStartupLauncher() {
+  const launcherPath = getWindowsStartupLauncherPath();
+  fs.mkdirSync(path.dirname(launcherPath), { recursive: true });
+  // UTF-16LE con BOM: wscript lee mal UTF-8 si la ruta tiene acentos.
+  const body = Buffer.from(buildStartupLauncher(), 'utf16le');
+  fs.writeFileSync(launcherPath, Buffer.concat([Buffer.from([0xff, 0xfe]), body]));
+  const child = spawn('wscript.exe', [launcherPath], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+  });
+  child.unref();
+  return launcherPath;
+}
+
+function removeStartupLauncher() {
+  const launcherPath = getWindowsStartupLauncherPath();
+  try {
+    if (fs.existsSync(launcherPath)) fs.unlinkSync(launcherPath);
+  } catch {
+    /* ignore */
+  }
+}
+
 function waitForStatus(port) {
   return new Promise((resolve) => {
     const deadline = Date.now() + 8000;
@@ -207,6 +254,7 @@ async function main() {
 
   await ensureSumatra();
 
+  let startupLauncher = '';
   try {
     runPs1(
       'register-task.ps1',
@@ -218,19 +266,28 @@ async function main() {
       ],
       { timeout: 45000 }
     );
+    removeStartupLauncher();
+    logger.info('Servicio instalado vía Scheduled Task', { task: WINDOWS_TASK_NAME });
   } catch (err) {
-    console.error('\nNo se pudo registrar la tarea programada.');
-    console.error(err.message);
-    console.error('\nEn PowerShell (sin Administrador):');
-    console.error('  npm run install-service');
-    console.error('\nMientras tanto puedes usar: npm start');
-    process.exit(1);
+    console.warn('\nWindows no permitió crear la tarea programada para este usuario:');
+    console.warn(`  ${String(err.message || err).split('\n')[0].trim()}`);
+    try {
+      startupLauncher = installStartupLauncher();
+      logger.info('Servicio instalado vía carpeta Inicio', { launcher: startupLauncher });
+    } catch (fallbackErr) {
+      console.error('\nTampoco se pudo crear el arranque en la carpeta Inicio:');
+      console.error(`  ${fallbackErr.message}`);
+      console.error('\nMientras tanto puedes usar: npm start');
+      process.exit(1);
+    }
   }
 
-  logger.info('Servicio instalado vía Scheduled Task', { task: WINDOWS_TASK_NAME });
-
   console.log('\nListo.');
-  console.log(`  Tarea:    ${WINDOWS_TASK_NAME} (al iniciar sesión)`);
+  if (startupLauncher) {
+    console.log(`  Arranque: carpeta Inicio del usuario (${startupLauncher})`);
+  } else {
+    console.log(`  Tarea:    ${WINDOWS_TASK_NAME} (al iniciar sesión)`);
+  }
   console.log(`  Status:   http://127.0.0.1:${port}/status`);
   console.log(`  Settings: http://127.0.0.1:${port}/settings`);
 

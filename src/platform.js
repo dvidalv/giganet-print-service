@@ -58,6 +58,20 @@ function getToolsDir() {
   return path.join(getSupportDir(), 'tools');
 }
 
+function getWindowsStartupLauncherPath() {
+  const roaming =
+    process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+  return path.join(
+    roaming,
+    'Microsoft',
+    'Windows',
+    'Start Menu',
+    'Programs',
+    'Startup',
+    `${WINDOWS_TASK_NAME}.vbs`
+  );
+}
+
 function getLaunchAgentPlistPath() {
   return path.join(
     os.homedir(),
@@ -83,6 +97,7 @@ module.exports = {
   getSupportDir,
   getLogDir,
   getToolsDir,
+  getWindowsStartupLauncherPath,
   getLaunchAgentPlistPath,
   getConfigPath,
 };

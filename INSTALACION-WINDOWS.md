@@ -106,7 +106,7 @@ npm run install-service
 1. Crea o reutiliza `%APPDATA%\GiganetPrintService\config.json`
 2. Deja una API Key (nueva, o la de `GIGANET_PRINT_KEY`)
 3. Descarga **SumatraPDF** portable (impresión PDF silenciosa) a `%LOCALAPPDATA%\GiganetPrintService\tools\`
-4. Registra la tarea programada `GiganetPrintService` (arranca al iniciar sesión)
+4. Registra la tarea programada `GiganetPrintService` (arranca al iniciar sesión). Si Windows no deja crear la tarea, usa la carpeta **Inicio** del usuario (`GiganetPrintService.vbs`), que no necesita permisos
 5. Libera el puerto 9100 si lo ocupaba un `npm start` viejo
 6. Espera a que `/status` responda
 
@@ -276,11 +276,19 @@ npm run install-service
 
 ## Problemas frecuentes
 
-### `install-service` no registra la tarea
+### `install-service` no registra la tarea (`Access is denied`)
 
-Abre PowerShell **sin** administrador, en la carpeta del proyecto, y vuelve a `npm run install-service`. Comprueba en el Programador de tareas que existe `GiganetPrintService`.
+Haz `git pull` y vuelve a `npm run install-service` en PowerShell **sin** administrador. Si Windows sigue sin dejar crear la tarea, el instalador usa la carpeta Inicio del usuario y lo indica con `Arranque: carpeta Inicio…`. Funciona igual: arranca oculto al iniciar sesión.
 
-Mientras tanto: `npm start`.
+### `npm` no corre en PowerShell ("running scripts is disabled")
+
+Una sola vez, sin administrador:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+Si la PC no deja cambiarlo, usa `npm.cmd install` / `npm.cmd run install-service`, o abre **Símbolo del sistema** en vez de PowerShell.
 
 ### Verificación de `/status` falló al instalar, pero luego sí responde
 

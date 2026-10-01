@@ -11,8 +11,10 @@ Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Silent
 
 $argument = '"' + $ServerJs + '"'
 $action = New-ScheduledTaskAction -Execute $NodePath -Argument $argument -WorkingDirectory $WorkingDirectory
-$trigger = New-ScheduledTaskTrigger -AtLogOn
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
+# -AtLogOn sin -User = "cualquier usuario" y Windows exige Administrador.
+$userId = if ($env:USERDOMAIN) { "$env:USERDOMAIN\$env:USERNAME" } else { $env:USERNAME }
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
+$principal = New-ScheduledTaskPrincipal -UserId $userId -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet `
   -AllowStartIfOnBatteries `
   -DontStopIfGoingOnBatteries `
