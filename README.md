@@ -105,6 +105,8 @@ Resolución de impresora:
 
 Roles válidos (LPCR): `label` (Zebra 2×1), `ticket` (recibo Epson 80 mm), `factura` (carta 8.5×11), `estudio` (informe HP 8.5×11).
 
+En `ticket` con PDF, el papel se toma del tamaño de la página del PDF (`media=Custom.80x143mm`, por ejemplo). Sin eso CUPS usa el largo por defecto del rollo y el ticket sale con espacio en blanco arriba.
+
 Tipos:
 
 - `pdf` — validación mágica `%PDF-` + `lp`

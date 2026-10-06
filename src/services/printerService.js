@@ -11,6 +11,7 @@ const printBackend = require('./printBackend');
 const pdfPrinter = require('../printers/pdfPrinter');
 const rawPrinter = require('../printers/rawPrinter');
 const escposPrinter = require('../printers/escposPrinter');
+const { pdfFirstPageSizeMm } = require('../utils/pdfPageSize');
 
 function createError(code, message, status = 400) {
   const err = new Error(message);
@@ -116,6 +117,29 @@ function mergeLpOptions(printerLpOptions, roleLpOptions) {
 }
 
 /**
+ * Opciones del role para este trabajo. Los tickets no tienen alto fijo: sin un
+ * `media` del tamaño del PDF, CUPS usa el papel por defecto del rollo (p. ej.
+ * 80×297 mm), coloca el ticket al fondo de esa página y sale papel en blanco
+ * antes del contenido.
+ */
+function roleLpOptionsForJob(role, type, data) {
+  const options = lpOptionsForRole(role);
+  if (role !== 'ticket' || type !== 'pdf' || typeof data !== 'string') {
+    return options;
+  }
+  let size = null;
+  try {
+    size = pdfFirstPageSizeMm(Buffer.from(data, 'base64'));
+  } catch {
+    size = null;
+  }
+  if (size) {
+    options.push(`media=Custom.${size.widthMm}x${size.heightMm}mm`);
+  }
+  return options;
+}
+
+/**
  * Despacha la impresión según type: pdf | raw | escpos
  */
 async function printDocument(payload) {
@@ -135,7 +159,7 @@ async function printDocument(payload) {
 
   const combinedLpOptions = mergeLpOptions(
     lpOptionsForPrinter(printer),
-    lpOptionsForRole(role)
+    roleLpOptionsForJob(role, type, payload.data)
   );
 
   switch (type) {
