@@ -7,6 +7,7 @@ const {
   sumatraSettingsFromLpOptions,
 } = require('../src/services/windowsPrintService');
 const platform = require('../src/platform');
+const { roleLpOptionsForJob } = require('../src/services/printerService');
 
 function testParsePrinterList() {
   assert.deepStrictEqual(parsePrinterList(''), []);
@@ -50,7 +51,49 @@ function testPlatformOnThisHost() {
   }
 }
 
+function pdfBase64WithMediaBox(widthPt, heightPt) {
+  return Buffer.from(
+    `%PDF-1.4\n3 0 obj<< /Type /Page /MediaBox [0 0 ${widthPt} ${heightPt}] >>endobj\n%%EOF\n`,
+    'latin1'
+  ).toString('base64');
+}
+
+function testRoleMediaFromPdfSize() {
+  const letter = pdfBase64WithMediaBox(612, 792);
+  const roll80 = pdfBase64WithMediaBox(226.77, 425.19);
+
+  assert.deepStrictEqual(roleLpOptionsForJob('factura', 'pdf', letter), [
+    'media=Letter',
+    'fit-to-page',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('factura', 'pdf', roll80), [
+    'fit-to-page',
+    'media=Custom.80x150mm',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('caja', 'pdf', roll80), [
+    'fit-to-page',
+    'media=Custom.80x150mm',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('ticket', 'pdf', roll80), [
+    'fit-to-page',
+    'media=Custom.80x150mm',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('estudio', 'pdf', roll80), [
+    'media=Letter',
+    'fit-to-page',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', roll80), [
+    'media=Custom.2x1in',
+    'fit-to-page',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('factura', 'pdf', 'bm90LWEtcGRm'), [
+    'media=Letter',
+    'fit-to-page',
+  ]);
+}
+
 testParsePrinterList();
 testSumatraSettings();
 testPlatformOnThisHost();
+testRoleMediaFromPdfSize();
 console.log('check-windows-helpers: ok');

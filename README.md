@@ -103,9 +103,21 @@ Resolución de impresora:
 3. Si no, `defaultPrinter`
 4. Si no hay ninguna → `NO_DEFAULT_PRINTER`
 
-Roles válidos (LPCR): `label` (Zebra 2×1), `ticket` (recibo Epson 80 mm), `factura` (carta 8.5×11), `estudio` (informe HP 8.5×11).
+Roles válidos:
+
+| Role | Uso | Papel |
+|------|-----|-------|
+| `label` | Etiqueta Zebra (LPCR, inventario POS) | 2×1 in |
+| `ticket` | Recibo térmico | Tamaño del PDF |
+| `factura` | Factura | Carta, o tamaño del PDF si es de rollo |
+| `estudio` | Informe LPCR (HP) | Carta |
+| `cotizacion` | Cotización POS | Carta, o tamaño del PDF si es de rollo |
+| `orden_compra` | Orden de compra POS | Carta, o tamaño del PDF si es de rollo |
+| `caja` | Cierre de caja POS | Carta, o tamaño del PDF si es de rollo |
 
 En `ticket` con PDF, el papel se toma del tamaño de la página del PDF (`media=Custom.80x143mm`, por ejemplo). Sin eso CUPS usa el largo por defecto del rollo y el ticket sale con espacio en blanco arriba.
+
+En `factura`, `cotizacion`, `orden_compra` y `caja`, si el PDF mide 120 mm de ancho o menos se trata como rollo térmico y se usa su tamaño (así un proyecto con factura de 80 mm imprime bien). Si es más ancho, se imprime en carta ajustado a la página, como antes.
 
 Tipos:
 

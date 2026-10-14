@@ -9,15 +9,33 @@ const { getSupportDir, getConfigPath, platformLabel } = require('./platform');
 const SERVICE_NAME = 'Giganet Print Service';
 const SERVICE_VERSION = '1.3.0';
 
-/** Roles LPCR: etiqueta Zebra, recibo Epson 80mm, factura/estudio carta. */
-const PRINT_ROLE_KEYS = ['label', 'ticket', 'factura', 'estudio'];
+/**
+ * Roles de documento. LPCR: label, ticket, factura, estudio.
+ * POS (giganet_pos, daymond-plaza…): label, ticket, factura, cotizacion, orden_compra, caja.
+ */
+const PRINT_ROLE_KEYS = [
+  'label',
+  'ticket',
+  'factura',
+  'estudio',
+  'cotizacion',
+  'orden_compra',
+  'caja',
+];
 
-/** Opciones `lp -o` por role (tamaño de papel CUPS). */
+/**
+ * Opciones `lp -o` por role (tamaño de papel CUPS). El `media=Letter` de los
+ * roles de documento es el papel cuando el PDF es de página completa; si el PDF
+ * es de rollo térmico, printerService lo sustituye por el tamaño del PDF.
+ */
 const ROLE_LP_OPTIONS = {
   label: ['media=Custom.2x1in', 'fit-to-page'],
   ticket: ['fit-to-page'],
   factura: ['media=Letter', 'fit-to-page'],
   estudio: ['media=Letter', 'fit-to-page'],
+  cotizacion: ['media=Letter', 'fit-to-page'],
+  orden_compra: ['media=Letter', 'fit-to-page'],
+  caja: ['media=Letter', 'fit-to-page'],
 };
 
 function lpOptionsForRole(role) {

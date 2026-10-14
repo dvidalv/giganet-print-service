@@ -18,7 +18,10 @@
     "label": "",
     "ticket": "",
     "factura": "",
-    "estudio": ""
+    "estudio": "",
+    "cotizacion": "",
+    "orden_compra": "",
+    "caja": ""
   },
   "printerOptions": {}
 }

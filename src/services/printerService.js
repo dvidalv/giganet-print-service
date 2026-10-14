@@ -117,26 +117,43 @@ function mergeLpOptions(printerLpOptions, roleLpOptions) {
 }
 
 /**
+ * Roles cuyo PDF puede ser de página completa (carta/A4) o de rollo térmico,
+ * según el proyecto (p. ej. factura carta en giganet_pos, 80 mm en daymond-plaza).
+ */
+const ROLL_AWARE_ROLES = new Set(['factura', 'cotizacion', 'orden_compra', 'caja']);
+
+/** Por encima de este ancho el PDF se trata como página completa, no rollo. */
+const ROLL_MAX_WIDTH_MM = 120;
+
+function readPdfSizeMm(data) {
+  try {
+    return pdfFirstPageSizeMm(Buffer.from(data, 'base64'));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Opciones del role para este trabajo. Los tickets no tienen alto fijo: sin un
  * `media` del tamaño del PDF, CUPS usa el papel por defecto del rollo (p. ej.
  * 80×297 mm), coloca el ticket al fondo de esa página y sale papel en blanco
- * antes del contenido.
+ * antes del contenido. Lo mismo aplica a una factura (u otro documento) cuyo
+ * PDF sea de rollo: forzar Letter en una térmica la imprime mal.
  */
 function roleLpOptionsForJob(role, type, data) {
   const options = lpOptionsForRole(role);
-  if (role !== 'ticket' || type !== 'pdf' || typeof data !== 'string') {
+  const sizedByPdf = role === 'ticket' || ROLL_AWARE_ROLES.has(role);
+  if (!sizedByPdf || type !== 'pdf' || typeof data !== 'string') {
     return options;
   }
-  let size = null;
-  try {
-    size = pdfFirstPageSizeMm(Buffer.from(data, 'base64'));
-  } catch {
-    size = null;
-  }
-  if (size) {
-    options.push(`media=Custom.${size.widthMm}x${size.heightMm}mm`);
-  }
-  return options;
+  const size = readPdfSizeMm(data);
+  if (!size) return options;
+  if (role !== 'ticket' && size.widthMm > ROLL_MAX_WIDTH_MM) return options;
+
+  return [
+    ...options.filter((opt) => !opt.startsWith('media=')),
+    `media=Custom.${size.widthMm}x${size.heightMm}mm`,
+  ];
 }
 
 /**
@@ -302,4 +319,5 @@ module.exports = {
   listPrinters,
   testPrint,
   resolvePrinter,
+  roleLpOptionsForJob,
 };

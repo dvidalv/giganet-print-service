@@ -396,7 +396,8 @@
       <section>
         <h2>Impresoras por tipo de documento</h2>
         <p class="hint" style="margin-top:0;margin-bottom:14px">
-          LPCR envía un <code>role</code> (label, ticket, factura, estudio). Vacío = usar la predeterminada.
+          La aplicación web envía un <code>role</code> con cada documento. Asigna solo los que uses; vacío = usar la predeterminada.
+          Factura, cotización, orden de compra y cierre de caja salen en carta o en rollo térmico según el tamaño del PDF.
         </p>
         <div id="roleFields" class="role-fields"></div>
         <div class="row">
@@ -409,8 +410,11 @@
             <option value="">Predeterminada</option>
             <option value="label">label — Zebra 2×1</option>
             <option value="ticket">ticket — Recibo 80 mm</option>
-            <option value="factura">factura — Carta 8.5×11</option>
+            <option value="factura">factura — Carta o rollo</option>
             <option value="estudio">estudio — Informe HP</option>
+            <option value="cotizacion">cotizacion — Cotización</option>
+            <option value="orden_compra">orden_compra — Orden de compra</option>
+            <option value="caja">caja — Cierre de caja</option>
           </select>
         </div>
       </section>
@@ -471,8 +475,11 @@
     const ROLE_DEFS = [
       { key: 'label', label: 'Etiqueta 2×1 (Zebra)' },
       { key: 'ticket', label: 'Recibo 80 mm (Epson POS)' },
-      { key: 'factura', label: 'Factura carta 8.5×11' },
+      { key: 'factura', label: 'Factura (carta o rollo 80 mm)' },
       { key: 'estudio', label: 'Informe de estudio 8.5×11 (HP)' },
+      { key: 'cotizacion', label: 'Cotización' },
+      { key: 'orden_compra', label: 'Orden de compra' },
+      { key: 'caja', label: 'Cierre de caja' },
     ];
 
     const MEDIA_PRESETS = [
