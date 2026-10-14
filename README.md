@@ -107,7 +107,7 @@ Roles válidos:
 
 | Role | Uso | Papel |
 |------|-----|-------|
-| `label` | Etiqueta (Zebra u otra de etiquetas) | 2×1 in |
+| `label` | Etiqueta (Zebra u otra de etiquetas) | Tamaño del PDF (p. ej. 2×1 o 1.25×0.75 in); 2×1 in si no se puede leer |
 | `ticket` | Recibo térmico | Tamaño del PDF |
 | `factura` | Factura | Carta, o tamaño del PDF si es de rollo |
 | `estudio` | Informe o estudio | Carta |

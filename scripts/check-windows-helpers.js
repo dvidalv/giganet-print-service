@@ -83,7 +83,19 @@ function testRoleMediaFromPdfSize() {
     'media=Letter',
     'fit-to-page',
   ]);
-  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', roll80), [
+  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', pdfBase64WithMediaBox(144, 72)), [
+    'fit-to-page',
+    'media=Custom.2x1in',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', pdfBase64WithMediaBox(90, 54)), [
+    'fit-to-page',
+    'media=Custom.1.25x0.75in',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', letter), [
+    'media=Custom.2x1in',
+    'fit-to-page',
+  ]);
+  assert.deepStrictEqual(roleLpOptionsForJob('label', 'pdf', 'bm90LWEtcGRm'), [
     'media=Custom.2x1in',
     'fit-to-page',
   ]);

@@ -11,7 +11,7 @@ const printBackend = require('./printBackend');
 const pdfPrinter = require('../printers/pdfPrinter');
 const rawPrinter = require('../printers/rawPrinter');
 const escposPrinter = require('../printers/escposPrinter');
-const { pdfFirstPageSizeMm } = require('../utils/pdfPageSize');
+const { pdfFirstPageSizeMm, pdfFirstPageSizePt } = require('../utils/pdfPageSize');
 
 function createError(code, message, status = 400) {
   const err = new Error(message);
@@ -125,12 +125,40 @@ const ROLL_AWARE_ROLES = new Set(['factura', 'cotizacion', 'orden_compra', 'caja
 /** Por encima de este ancho el PDF se trata como página completa, no rollo. */
 const ROLL_MAX_WIDTH_MM = 120;
 
+/** Etiquetas hasta 4×6 in (con holgura); un PDF más grande no es una etiqueta. */
+const LABEL_MAX_WIDTH_IN = 4.5;
+const LABEL_MAX_HEIGHT_IN = 6.5;
+const LABEL_MIN_SIDE_IN = 0.4;
+
 function readPdfSizeMm(data) {
   try {
     return pdfFirstPageSizeMm(Buffer.from(data, 'base64'));
   } catch {
     return null;
   }
+}
+
+function formatInches(value) {
+  return String(Math.round(value * 100) / 100);
+}
+
+/**
+ * Papel de la etiqueta según el PDF (p. ej. 1.25×0.75 in), en pulgadas exactas
+ * para no redondear a mm enteros. null si el PDF no se lee o no es de etiqueta.
+ */
+function labelMediaFromPdf(data) {
+  let size = null;
+  try {
+    size = pdfFirstPageSizePt(Buffer.from(data, 'base64'));
+  } catch {
+    size = null;
+  }
+  if (!size) return null;
+  const widthIn = size.widthPt / 72;
+  const heightIn = size.heightPt / 72;
+  if (Math.min(widthIn, heightIn) < LABEL_MIN_SIDE_IN) return null;
+  if (widthIn > LABEL_MAX_WIDTH_IN || heightIn > LABEL_MAX_HEIGHT_IN) return null;
+  return `media=Custom.${formatInches(widthIn)}x${formatInches(heightIn)}in`;
 }
 
 /**
@@ -142,6 +170,11 @@ function readPdfSizeMm(data) {
  */
 function roleLpOptionsForJob(role, type, data) {
   const options = lpOptionsForRole(role);
+  if (role === 'label' && type === 'pdf' && typeof data === 'string') {
+    const media = labelMediaFromPdf(data);
+    if (!media) return options;
+    return [...options.filter((opt) => !opt.startsWith('media=')), media];
+  }
   const sizedByPdf = role === 'ticket' || ROLL_AWARE_ROLES.has(role);
   if (!sizedByPdf || type !== 'pdf' || typeof data !== 'string') {
     return options;
