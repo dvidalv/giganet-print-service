@@ -1,6 +1,6 @@
 'use strict';
 
-const { getConfig } = require('../config');
+const { getConfig, normalizeOrigin } = require('../config');
 const logger = require('../utils/logger');
 
 function isLocalHost(hostHeader) {
@@ -21,7 +21,7 @@ function isLoopbackOrigin(origin) {
 function corsMiddleware(req, res, next) {
   const config = getConfig();
   const origin = req.get('Origin');
-  const allowed = config.allowedOrigins || [];
+  const allowed = (config.allowedOrigins || []).map(normalizeOrigin);
 
   // Same-origin settings UI and tools without Origin (curl) from loopback
   if (!origin) {

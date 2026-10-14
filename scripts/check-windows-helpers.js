@@ -8,6 +8,7 @@ const {
 } = require('../src/services/windowsPrintService');
 const platform = require('../src/platform');
 const { roleLpOptionsForJob } = require('../src/services/printerService');
+const { normalizeOrigin } = require('../src/config');
 
 function testParsePrinterList() {
   assert.deepStrictEqual(parsePrinterList(''), []);
@@ -92,7 +93,18 @@ function testRoleMediaFromPdfSize() {
   ]);
 }
 
+function testNormalizeOrigin() {
+  assert.strictEqual(normalizeOrigin('https://pos.giganet-srl.com/'), 'https://pos.giganet-srl.com');
+  assert.strictEqual(
+    normalizeOrigin(' https://pos.giganet-srl.com/dashboard/facturas '),
+    'https://pos.giganet-srl.com'
+  );
+  assert.strictEqual(normalizeOrigin('http://localhost:3000'), 'http://localhost:3000');
+  assert.strictEqual(normalizeOrigin(''), '');
+}
+
 testParsePrinterList();
+testNormalizeOrigin();
 testSumatraSettings();
 testPlatformOnThisHost();
 testRoleMediaFromPdfSize();

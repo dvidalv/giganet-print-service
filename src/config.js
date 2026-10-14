@@ -62,6 +62,17 @@ function readDefaultConfig() {
   return JSON.parse(raw);
 }
 
+/** El navegador envía el Origin sin barra final ni ruta (`https://app.com`). */
+function normalizeOrigin(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return raw.replace(/\/+$/, '');
+  }
+}
+
 function normalizePrinterRoles(rawRoles, defaults) {
   const base =
     defaults && typeof defaults === 'object'
@@ -249,9 +260,9 @@ function updateConfig(partial) {
       err.code = 'INVALID_ORIGINS';
       throw err;
     }
-    next.allowedOrigins = partial.allowedOrigins
-      .map((o) => String(o).trim())
-      .filter(Boolean);
+    next.allowedOrigins = [
+      ...new Set(partial.allowedOrigins.map(normalizeOrigin).filter(Boolean)),
+    ];
   }
   if (partial.printTimeoutMs !== undefined) {
     const ms = Number(partial.printTimeoutMs);
@@ -390,6 +401,7 @@ module.exports = {
   updateConfig,
   getPublicConfig,
   getSettingsPageConfig,
+  normalizeOrigin,
   normalizePrinterRoles,
   normalizePrinterOptions,
   normalizeOrientation,
