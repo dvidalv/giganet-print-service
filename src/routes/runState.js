@@ -27,7 +27,7 @@ function respondPaused(req, res, paused) {
     paused: Boolean(updated.paused),
     status: updated.paused ? 'paused' : 'online',
     message: updated.paused
-      ? 'Servicio pausado. LPCR no imprimirá hasta que pulses Iniciar.'
+      ? 'Servicio pausado. Ninguna aplicación imprimirá hasta que pulses Iniciar.'
       : 'Servicio en línea.',
   });
 }

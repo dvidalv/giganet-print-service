@@ -1,8 +1,8 @@
 # Manual de instalación — Giganet Print Service
 
-Servicio **local de macOS** para que LPCR imprima en silencio (Zebra 2×1, Epson 80 mm, HP carta) sin el diálogo del navegador.
+Servicio **local de macOS** para que tus aplicaciones web (POS, sistemas internos, PWA) impriman en silencio (etiquetas 2×1, recibos 80 mm, carta) sin el diálogo del navegador.
 
-LPCR en internet (`https://app.contrerasrobledo.com`) **no imprime solo**. En **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, usando las impresoras CUPS **de esa** computadora.
+Una aplicación en internet (por ejemplo `https://mi-app.vercel.app`) **no imprime sola**. En **cada Mac** que vaya a imprimir debe correr este servicio en `http://127.0.0.1:9100`, usando las impresoras CUPS **de esa** computadora. Una misma instalación puede atender a varias aplicaciones.
 
 - Este manual es **solo macOS** (Apple Silicon o Intel). En un PC con Windows usa [`INSTALACION-WINDOWS.md`](INSTALACION-WINDOWS.md). La API y la API Key son las mismas.
 - No copies `node_modules` ni el LaunchAgent de otra Mac.
@@ -16,7 +16,7 @@ Versión actual del paquete: **1.3.0**. El encabezado de `/settings` debe coinci
 
 ```text
 Chrome en esta Mac
-    → https://app.contrerasrobledo.com  (LPCR en Vercel)
+    → https://mi-app.vercel.app         (tu aplicación en Vercel)
     → http://127.0.0.1:9100             (este servicio, solo en esta Mac)
     → CUPS                              (impresoras de esta Mac)
 ```
@@ -25,9 +25,9 @@ Vercel lleva embebidas la URL y la API Key. El servicio local debe usar **la mis
 
 ---
 
-## Una sola API Key para todo el laboratorio
+## Una sola API Key compartida
 
-`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel es la clave que LPCR envía a `127.0.0.1:9100`.
+`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel es la clave que la aplicación envía a `127.0.0.1:9100`. Si varias aplicaciones imprimen en las mismas computadoras, todas deben usar la misma clave.
 
 | Situación | Qué hacer |
 |-----------|-----------|
@@ -41,7 +41,7 @@ Si las keys no coinciden, producción no autentica contra esa Mac. **No pulses R
 ## Requisitos
 
 - macOS 12 o superior
-- La misma cuenta de usuario con la que se abre Chrome y LPCR
+- La misma cuenta de usuario con la que se abre Chrome y la aplicación
 - **Node.js 20 LTS o superior** — [nodejs.org](https://nodejs.org) o `brew install node`
 - Impresoras en **Ajustes del Sistema → Impresoras y escáneres** (CUPS)
 
@@ -170,13 +170,11 @@ El badge debe decir **En línea**.
 
 ### Dominios permitidos (CORS)
 
-Uno por línea → **Guardar orígenes**. El valor por defecto ya incluye producción:
+Uno por línea → **Guardar orígenes**. El valor por defecto solo incluye desarrollo local; agrega el dominio de producción de **cada** aplicación que vaya a imprimir en esta Mac:
 
 ```text
-https://app.contrerasrobledo.com
-https://lpcr.vercel.app
-https://www.contrerasrobledo.com
-https://contrerasrobledo.com
+https://mi-app.vercel.app
+https://www.mi-dominio.com
 http://localhost:3000
 http://localhost:3001
 http://127.0.0.1:3000
@@ -187,21 +185,24 @@ http://127.0.0.1:3000
 1. Elige **impresora predeterminada** en la lista visible (no el menú nativo de macOS, que en modo oscuro a veces no se lee) → **Guardar impresora**.
 2. En **Impresoras por tipo de documento**, asigna una cola a cada tipo → **Guardar roles**.
 
-| Role | Documento en LPCR | Impresora típica |
-|------|-------------------|------------------|
+| Role | Documento | Impresora típica |
+|------|-----------|------------------|
 | `label` | Etiqueta 2×1 | Zebra |
 | `ticket` | Recibo 80 mm | Epson POS |
-| `factura` | Factura carta 8.5×11 | HP / láser |
-| `estudio` | Informe de estudio 8.5×11 | HP / láser |
+| `factura` | Factura (carta o rollo 80 mm) | HP / láser, o térmica |
+| `estudio` | Informe o estudio 8.5×11 | HP / láser |
+| `cotizacion` | Cotización | HP / láser, o térmica |
+| `orden_compra` | Orden de compra | HP / láser |
+| `caja` | Cierre de caja | HP / láser, o térmica |
 
-Vacío = usa la predeterminada.
+Asigna solo los que use tu aplicación. Vacío = usa la predeterminada.
 
 3. **Probar impresión** y **Probar role**.
 4. En **Tamaño de papel y orientación**, elige papel y retrato/paisaje por cola (o déjalo vacío para usar el del role) → **Guardar papel y orientación**.
 
 ### Iniciar / Detener
 
-- **Detener servicio** pausa la impresión. LPCR no imprime. El proceso **sigue** en `127.0.0.1:9100`.
+- **Detener servicio** pausa la impresión. Ninguna aplicación imprime. El proceso **sigue** en `127.0.0.1:9100`.
 - **Iniciar servicio** reanuda.
 - Cerrar la ventana de `/settings` no pausa ni apaga nada.
 
@@ -243,9 +244,9 @@ La PWA comprueba actualizaciones cada 30 s y al enfocar la ventana. Si cambió `
 
 ---
 
-## 5. Primera vez: variables en Vercel (proyecto LPCR)
+## 5. Primera vez: variables en Vercel (proyecto de tu aplicación)
 
-Solo hace falta **una vez** para todo el laboratorio. No se cambia al añadir otra Mac.
+Solo hace falta **una vez** por aplicación. No se cambia al añadir otra Mac.
 
 | Variable | Valor |
 |----------|--------|
@@ -256,10 +257,10 @@ Production (y Preview si aplica) → **Redeploy**. Las `NEXT_PUBLIC_*` se embebe
 
 ---
 
-## 6. Imprimir desde LPCR
+## 6. Imprimir desde la aplicación
 
-1. En esa Mac abre https://app.contrerasrobledo.com
-2. Estudio, factura o recibo → **Imprimir**.
+1. En esa Mac abre tu aplicación (por ejemplo https://mi-app.vercel.app).
+2. Factura, recibo, etiqueta u otro documento → **Imprimir**.
 3. Chrome 142+ pide permiso de **red local** para hablar con `127.0.0.1`. Pulsa **Permitir**.
 
 Si lo bloqueaste: candado de la barra → configuración del sitio → **Red local** → **Permitir** → recarga e imprime de nuevo.
@@ -344,7 +345,7 @@ Hay un Node antiguo en el 9100. `install-service` mata ese proceso y arranca el 
 
 ### Chrome bloqueó 127.0.0.1
 
-Permiso de **red local** para `app.contrerasrobledo.com` (paso 6). En `/settings`, CORS debe incluir ese origen.
+Permiso de **red local** para el dominio de tu aplicación (paso 6). En `/settings`, CORS debe incluir ese origen.
 
 ### Settings dice Desconectado / `lpstat: Bad file descriptor`
 
@@ -391,11 +392,11 @@ Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en CUPS de es
 - [ ] `npm install` + `npm run install-service` (con `GIGANET_PRINT_KEY` si ya existe Vercel)
 - [ ] `curl http://127.0.0.1:9100/status` → `online` (no `paused`)
 - [ ] `/settings`: API Key **igual** a Vercel → Guardar clave
-- [ ] CORS con `https://app.contrerasrobledo.com`
+- [ ] CORS con el dominio de cada aplicación que imprime
 - [ ] Predeterminada + roles → Guardar → prueba de impresión
-- [ ] En Chrome, **Permitir** red local al imprimir desde LPCR
+- [ ] En Chrome, **Permitir** red local al imprimir desde la aplicación
 
-**Solo en el primer setup del laboratorio**
+**Solo la primera vez por aplicación**
 
 - [ ] Variables `NEXT_PUBLIC_GIGANET_PRINT_URL` y `NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel
 - [ ] Redeploy Production

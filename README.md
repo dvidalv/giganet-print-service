@@ -2,7 +2,7 @@
 
 Servicio local de impresión para **macOS** (Apple Silicon e Intel) y **Windows 10/11**. Expone una API HTTP en `127.0.0.1` para que tu aplicación web o PWA imprima PDF (y raw/ESC/POS) **sin** el diálogo del navegador y **sin** QZ Tray.
 
-La API es la misma en Mac y PC. LPCR no distingue el sistema: habla con `http://127.0.0.1:9100` en **esa** computadora.
+La API es la misma en Mac y PC. La aplicación web no distingue el sistema: habla con `http://127.0.0.1:9100` en **esa** computadora. Una misma instalación puede atender a varias aplicaciones a la vez (agrega el dominio de cada una en `allowedOrigins`).
 
 Manuales paso a paso: [`INSTALACION.md`](INSTALACION.md) (Mac) · [`INSTALACION-WINDOWS.md`](INSTALACION-WINDOWS.md) (PC).
 
@@ -107,13 +107,13 @@ Roles válidos:
 
 | Role | Uso | Papel |
 |------|-----|-------|
-| `label` | Etiqueta Zebra (LPCR, inventario POS) | 2×1 in |
+| `label` | Etiqueta (Zebra u otra de etiquetas) | 2×1 in |
 | `ticket` | Recibo térmico | Tamaño del PDF |
 | `factura` | Factura | Carta, o tamaño del PDF si es de rollo |
-| `estudio` | Informe LPCR (HP) | Carta |
-| `cotizacion` | Cotización POS | Carta, o tamaño del PDF si es de rollo |
-| `orden_compra` | Orden de compra POS | Carta, o tamaño del PDF si es de rollo |
-| `caja` | Cierre de caja POS | Carta, o tamaño del PDF si es de rollo |
+| `estudio` | Informe o estudio | Carta |
+| `cotizacion` | Cotización | Carta, o tamaño del PDF si es de rollo |
+| `orden_compra` | Orden de compra | Carta, o tamaño del PDF si es de rollo |
+| `caja` | Cierre de caja | Carta, o tamaño del PDF si es de rollo |
 
 En `ticket` con PDF, el papel se toma del tamaño de la página del PDF (`media=Custom.80x143mm`, por ejemplo). Sin eso CUPS usa el largo por defecto del rollo y el ticket sale con espacio en blanco arriba.
 
@@ -160,8 +160,8 @@ Archivo de configuración:
   "host": "127.0.0.1",
   "apiKey": "…",
   "allowedOrigins": [
-    "https://lpcr.vercel.app",
-    "https://www.contrerasrobledo.com",
+    "https://mi-app.vercel.app",
+    "https://www.mi-dominio.com",
     "http://localhost:3000",
     "http://localhost:3001"
   ],
@@ -185,7 +185,7 @@ Logs:
 ## Integración PWA / Next.js
 
 1. Añade tu dominio de producción a `allowedOrigins` (UI `/settings` o `POST /config`)
-2. Copia `examples/nextjs/giganetPrint.js` a LPCR (`lib/printService.js`)
+2. Copia `examples/nextjs/giganetPrint.js` a tu aplicación (por ejemplo `lib/printService.js`)
 3. Define la API Key (idealmente solo en clientes de confianza / POS internos):
 
 ```bash

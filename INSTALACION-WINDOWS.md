@@ -1,14 +1,14 @@
 # Manual de instalación — Giganet Print Service (Windows)
 
-Servicio **local de Windows** para que LPCR imprima en silencio (Zebra 2×1, Epson 80 mm, HP carta) sin el diálogo del navegador.
+Servicio **local de Windows** para que tus aplicaciones web (POS, sistemas internos, PWA) impriman en silencio (etiquetas 2×1, recibos 80 mm, carta) sin el diálogo del navegador.
 
-Es el mismo servicio y la **misma API** que en Mac (`http://127.0.0.1:9100`). LPCR no cambia: en **cada PC** que vaya a imprimir debe correr este proceso, usando las impresoras **de esa** computadora.
+Es el mismo servicio y la **misma API** que en Mac (`http://127.0.0.1:9100`). La aplicación no cambia: en **cada PC** que vaya a imprimir debe correr este proceso, usando las impresoras **de esa** computadora. Una misma instalación puede atender a varias aplicaciones.
 
 - Windows 10 o 11 (64 bits).
 - No copies `node_modules` ni la tarea programada de otra PC.
 - Cerrar Chrome o la PWA **no** apaga el servicio.
 
-La API Key es **la misma** que en las Mac del laboratorio (`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel).
+La API Key es **la misma** que en las demás computadoras que imprimen para esa aplicación (`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel).
 
 Versión actual del paquete: **1.3.0**. El encabezado de `/settings` debe coincidir con el `git pull`.
 
@@ -18,7 +18,7 @@ Versión actual del paquete: **1.3.0**. El encabezado de `/settings` debe coinci
 
 ```text
 Chrome en este PC
-    → https://app.contrerasrobledo.com  (LPCR en Vercel)
+    → https://mi-app.vercel.app         (tu aplicación en Vercel)
     → http://127.0.0.1:9100             (este servicio, solo en este PC)
     → Spooler de Windows                (impresoras de este PC)
 ```
@@ -27,9 +27,9 @@ Vercel lleva embebidas la URL y la API Key. El servicio local debe usar **la mis
 
 ---
 
-## Una sola API Key para todo el laboratorio
+## Una sola API Key compartida
 
-`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel es la clave que LPCR envía a `127.0.0.1:9100`.
+`NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel es la clave que la aplicación envía a `127.0.0.1:9100`. Si varias aplicaciones imprimen en las mismas computadoras, todas deben usar la misma clave.
 
 | Situación | Qué hacer |
 |-----------|-----------|
@@ -43,7 +43,7 @@ Si las keys no coinciden, producción no autentica contra esa PC. **No pulses Re
 ## Requisitos
 
 - Windows 10 o 11
-- La misma cuenta de usuario con la que se abre Chrome y LPCR
+- La misma cuenta de usuario con la que se abre Chrome y la aplicación
 - **Node.js 20 LTS o superior** — [nodejs.org](https://nodejs.org) (instalador Windows, 64-bit). Marca **Add to PATH**.
 - **Git** — [git-scm.com](https://git-scm.com) (opciones por defecto)
 - Impresoras en **Configuración → Bluetooth y dispositivos → Impresoras y escáneres**
@@ -163,13 +163,11 @@ El badge debe decir **En línea**. El encabezado debe incluir **Windows**.
 
 ### Dominios permitidos (CORS)
 
-Uno por línea → **Guardar orígenes**. El valor por defecto ya incluye producción:
+Uno por línea → **Guardar orígenes**. El valor por defecto solo incluye desarrollo local; agrega el dominio de producción de **cada** aplicación que vaya a imprimir en este PC:
 
 ```text
-https://app.contrerasrobledo.com
-https://lpcr.vercel.app
-https://www.contrerasrobledo.com
-https://contrerasrobledo.com
+https://mi-app.vercel.app
+https://www.mi-dominio.com
 http://localhost:3000
 http://localhost:3001
 http://127.0.0.1:3000
@@ -180,14 +178,17 @@ http://127.0.0.1:3000
 1. Elige **impresora predeterminada** en la lista → **Guardar impresora**.
 2. En **Impresoras por tipo de documento**, asigna una cola a cada tipo → **Guardar roles**.
 
-| Role | Documento en LPCR | Impresora típica |
-|------|-------------------|------------------|
+| Role | Documento | Impresora típica |
+|------|-----------|------------------|
 | `label` | Etiqueta 2×1 | Zebra |
 | `ticket` | Recibo 80 mm | Epson POS |
-| `factura` | Factura carta 8.5×11 | HP / láser |
-| `estudio` | Informe de estudio 8.5×11 | HP / láser |
+| `factura` | Factura (carta o rollo 80 mm) | HP / láser, o térmica |
+| `estudio` | Informe o estudio 8.5×11 | HP / láser |
+| `cotizacion` | Cotización | HP / láser, o térmica |
+| `orden_compra` | Orden de compra | HP / láser |
+| `caja` | Cierre de caja | HP / láser, o térmica |
 
-Vacío = usa la predeterminada.
+Asigna solo los que use tu aplicación. Vacío = usa la predeterminada.
 
 3. **Probar impresión** y **Probar role**.
 4. En **Tamaño de papel y orientación**, elige papel y retrato/paisaje por cola → **Guardar papel y orientación**.
@@ -196,7 +197,7 @@ En Windows el PDF silencioso usa SumatraPDF. Si no se descargó, el servicio cae
 
 ### Iniciar / Detener
 
-- **Detener servicio** pausa la impresión. LPCR no imprime. El proceso **sigue** en `127.0.0.1:9100`.
+- **Detener servicio** pausa la impresión. Ninguna aplicación imprime. El proceso **sigue** en `127.0.0.1:9100`.
 - **Iniciar servicio** reanuda.
 - Cerrar la ventana de `/settings` no pausa ni apaga nada.
 
@@ -211,9 +212,9 @@ En Windows el icono suele quedar en el menú Inicio. También: `chrome://apps`.
 
 ---
 
-## 5. Primera vez: variables en Vercel (proyecto LPCR)
+## 5. Primera vez: variables en Vercel (proyecto de tu aplicación)
 
-Solo hace falta **una vez** para todo el laboratorio. No se cambia al añadir un PC.
+Solo hace falta **una vez** por aplicación. No se cambia al añadir un PC.
 
 | Variable | Valor |
 |----------|--------|
@@ -224,10 +225,10 @@ Production (y Preview si aplica) → **Redeploy**.
 
 ---
 
-## 6. Imprimir desde LPCR
+## 6. Imprimir desde la aplicación
 
-1. En ese PC abre https://app.contrerasrobledo.com
-2. Estudio, factura o recibo → **Imprimir**.
+1. En ese PC abre tu aplicación (por ejemplo https://mi-app.vercel.app).
+2. Factura, recibo, etiqueta u otro documento → **Imprimir**.
 3. Chrome 142+ pide permiso de **red local** para hablar con `127.0.0.1`. Pulsa **Permitir**.
 
 Si lo bloqueaste: candado de la barra → configuración del sitio → **Red local** → **Permitir** → recarga e imprime de nuevo.
@@ -312,7 +313,7 @@ Las impresoras térmicas deben estar instaladas como impresora de Windows (USB o
 
 ### Chrome bloqueó 127.0.0.1
 
-Permiso de **red local** para `app.contrerasrobledo.com`. En `/settings`, CORS debe incluir ese origen.
+Permiso de **red local** para el dominio de tu aplicación. En `/settings`, CORS debe incluir ese origen.
 
 ### El servicio no está en línea
 
@@ -337,11 +338,11 @@ Repite este manual. **Misma** API Key de Vercel. Impresoras nuevas en Windows de
 - [ ] `npm install` + `npm run install-service` (con `GIGANET_PRINT_KEY` si ya existe Vercel)
 - [ ] `/status` → `online` (no `paused`), `os: Windows`
 - [ ] `/settings`: API Key **igual** a Vercel → Guardar clave
-- [ ] CORS con `https://app.contrerasrobledo.com`
+- [ ] CORS con el dominio de cada aplicación que imprime
 - [ ] Predeterminada + roles → Guardar → prueba de impresión
-- [ ] En Chrome, **Permitir** red local al imprimir desde LPCR
+- [ ] En Chrome, **Permitir** red local al imprimir desde la aplicación
 
-**Solo en el primer setup del laboratorio**
+**Solo la primera vez por aplicación**
 
 - [ ] Variables `NEXT_PUBLIC_GIGANET_PRINT_URL` y `NEXT_PUBLIC_GIGANET_PRINT_KEY` en Vercel
 - [ ] Redeploy Production

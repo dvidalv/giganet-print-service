@@ -376,7 +376,7 @@
           <button type="button" id="btnStartService">Iniciar servicio</button>
           <button type="button" class="danger" id="btnStopService">Detener servicio</button>
         </div>
-        <p class="hint">Cerrar esta ventana no detiene nada. <strong>Detener</strong> pausa la impresión (LPCR no imprime). <strong>Iniciar</strong> la reanuda. El proceso sigue en 127.0.0.1:9100.</p>
+        <p class="hint">Cerrar esta ventana no detiene nada. <strong>Detener</strong> pausa la impresión (las aplicaciones no imprimen). <strong>Iniciar</strong> la reanuda. El proceso sigue en 127.0.0.1:9100.</p>
       </section>
 
       <section>
@@ -464,7 +464,7 @@
         <div class="row">
           <button type="button" id="btnSaveOrigins">Guardar orígenes</button>
         </div>
-        <p class="hint">Ejemplo: https://lpcr.vercel.app — No uses *.</p>
+        <p class="hint">Ejemplo: https://mi-app.vercel.app — Agrega el dominio de cada aplicación que imprime aquí. No uses *.</p>
       </section>
     </div>
   </div>
@@ -1014,7 +1014,7 @@
       try {
         await api('/settings/start', { method: 'POST', body: JSON.stringify({}) });
         setStatus('ok', 'Servicio operativo');
-        toast('Servicio iniciado. LPCR ya puede imprimir.');
+        toast('Servicio iniciado. Las aplicaciones ya pueden imprimir.');
       } catch (e) {
         btn.disabled = false;
         if (!e.status) {
@@ -1030,7 +1030,7 @@
     });
 
     document.getElementById('btnStopService').addEventListener('click', async () => {
-      if (!confirm('¿Pausar la impresión en ' + thisComputer() + '? LPCR no imprimirá hasta que pulses Iniciar servicio.')) {
+      if (!confirm('¿Pausar la impresión en ' + thisComputer() + '? Ninguna aplicación imprimirá hasta que pulses Iniciar servicio.')) {
         return;
       }
       const btn = document.getElementById('btnStopService');

@@ -9,10 +9,7 @@ const { getSupportDir, getConfigPath, platformLabel } = require('./platform');
 const SERVICE_NAME = 'Giganet Print Service';
 const SERVICE_VERSION = '1.3.0';
 
-/**
- * Roles de documento. LPCR: label, ticket, factura, estudio.
- * POS (giganet_pos, daymond-plaza…): label, ticket, factura, cotizacion, orden_compra, caja.
- */
+/** Roles de documento que pueden enviar las aplicaciones; cada una usa los que necesita. */
 const PRINT_ROLE_KEYS = [
   'label',
   'ticket',

@@ -250,7 +250,7 @@ async function main() {
   console.log(`Configuración: ${CONFIG_PATH}`);
   console.log(`API Key (guárdala): ${config.apiKey}`);
   console.log(
-    'Si LPCR ya está en Vercel, esta clave DEBE ser NEXT_PUBLIC_GIGANET_PRINT_KEY. Pégala en /settings si es distinta.'
+    'Si tu aplicación ya tiene NEXT_PUBLIC_GIGANET_PRINT_KEY en Vercel, esta clave DEBE ser la misma. Pégala en /settings si es distinta.'
   );
   console.log(`Directorio de soporte: ${SUPPORT_DIR}`);
 
